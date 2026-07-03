@@ -367,7 +367,6 @@ class LudoGameApp {
         // Gameplay Top Bar Buttons
         const btnSound = document.getElementById('btn-sound-toggle');
         const btnFullscreen = document.getElementById('btn-fullscreen-toggle');
-        const btnPause = document.getElementById('btn-pause-game');
         const btnGameSettings = document.getElementById('btn-game-settings');
         const btnChat = document.getElementById('btn-chat-trigger');
 
@@ -383,13 +382,6 @@ class LudoGameApp {
             btnFullscreen.addEventListener('click', () => {
                 this.playAudio('click');
                 this.toggleFullscreen();
-            });
-        }
-
-        if (btnPause) {
-            btnPause.addEventListener('click', () => {
-                this.playAudio('click');
-                alert('Game paused. Press OK to resume.');
             });
         }
 
@@ -2727,7 +2719,7 @@ class LudoGameApp {
     }
 
     exitGame() {
-        if (confirm('Are you sure you want to exit Ludo Champion?')) {
+        if (confirm('Are you sure you want to exit HashLudo?')) {
             window.close();
         }
     }
