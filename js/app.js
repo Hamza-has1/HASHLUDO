@@ -67,13 +67,18 @@ class LudoAudioEngine {
             osc.stop(now + 0.19);
         }
         else if (type === 'capture') {
-            osc.type = 'sawtooth';
-            osc.frequency.setValueAtTime(800, now);
-            osc.frequency.linearRampToValueAtTime(50, now + 0.35);
-            gain.gain.setValueAtTime(this.sfxVolume * 0.3, now);
-            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(440, now);
+            // Cartoon "boing" vibrato slide down
+            for (let i = 0; i < 30; i++) {
+                const t = now + (i * 0.015);
+                const freq = Math.max(80, 440 - (i * 12) + Math.sin(i * 1.5) * 45);
+                osc.frequency.setValueAtTime(freq, t);
+            }
+            gain.gain.setValueAtTime(this.sfxVolume * 0.35, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.45);
             osc.start(now);
-            osc.stop(now + 0.36);
+            osc.stop(now + 0.46);
         }
         else if (type === 'notification') {
             osc.type = 'sine';
@@ -1120,6 +1125,11 @@ class LudoGameApp {
             this.tokens[color].forEach(token => {
                 token.position = -1;
                 token.isFinished = false;
+                if (token.element) {
+                    token.element.style.display = '';
+                    token.element.style.transform = '';
+                    token.element.style.zIndex = '';
+                }
                 this.moveTokenToHomeSlot(token);
             });
             this.stats[color] = { turnsPlayed: 0, capturesMade: 0, timesCaptured: 0, distanceTravelled: 0 };
@@ -2016,14 +2026,6 @@ class LudoGameApp {
     }
 
     isPathBlockedByBlockade(token, startPos, steps) {
-        const color = token.color;
-        for (let s = 1; s <= steps; s++) {
-            const checkPos = startPos + s;
-            const coords = this.playerPaths[color][checkPos];
-            if (this.hasOpponentBlockadeAt(color, coords)) {
-                return true;
-            }
-        }
         return false;
     }
 
@@ -2147,12 +2149,12 @@ class LudoGameApp {
                 this.showToastNotification('Token Captured!', color);
                 this.logFeedMessage(`${this.playerNames[color]} captured opponent token!`);
                 
-                capturedList.forEach(cToken => {
-                    cToken.position = -1;
-                    this.stats[cToken.color].timesCaptured++;
-                    this.updateStatsUI(cToken.color);
-                    this.moveTokenToHomeSlot(cToken);
-                });
+                // Only capture ONE token, others remain safe on the slot!
+                const cToken = capturedList[0];
+                cToken.position = -1;
+                this.stats[cToken.color].timesCaptured++;
+                this.updateStatsUI(cToken.color);
+                this.moveTokenToHomeSlot(cToken);
 
                 this.stats[color].capturesMade++;
                 this.updateStatsUI(color);
@@ -2186,7 +2188,12 @@ class LudoGameApp {
             this.logFeedMessage(`${this.playerNames[color]}'s token reached center!`);
             
             if (token.element) {
-                token.element.style.display = 'none';
+                const finishedOffsets = [
+                    {x: -6, y: -6}, {x: 6, y: -6}, {x: -6, y: 6}, {x: 6, y: 6}
+                ];
+                const offsetIdx = token.id % 4;
+                token.element.style.transform = `scale(0.6) translate(${finishedOffsets[offsetIdx].x}px, ${finishedOffsets[offsetIdx].y}px)`;
+                token.element.style.zIndex = "5";
             }
         }
 
@@ -2266,8 +2273,12 @@ class LudoGameApp {
             });
         });
 
+        // Clear existing blockade classes and numeric badges on cells
         document.querySelectorAll('.board-cell.cell-blockade').forEach(el => {
             el.classList.remove('cell-blockade');
+        });
+        document.querySelectorAll('.cell-token-badge').forEach(el => {
+            el.remove();
         });
 
         Object.keys(clusters).forEach(key => {
@@ -2276,12 +2287,23 @@ class LudoGameApp {
             const [r, c] = key.split('_').map(Number);
             const cellEl = document.getElementById(`cell-${r}-${c}`);
 
-            if (len >= 2) {
-                const firstColor = list[0].color;
-                const isBlockade = list.every(t => t.color === firstColor);
-                if (isBlockade && cellEl) {
-                    cellEl.classList.add('cell-blockade');
-                }
+            // Count tokens by color on this cell
+            const colorCounts = {};
+            list.forEach(t => {
+                colorCounts[t.color] = (colorCounts[t.color] || 0) + 1;
+            });
+
+            if (cellEl) {
+                // Show badge for each color that has count > 1
+                Object.keys(colorCounts).forEach(color => {
+                    const count = colorCounts[color];
+                    if (count > 1) {
+                        const badge = document.createElement('span');
+                        badge.className = `cell-token-badge badge-${color}`;
+                        badge.textContent = count;
+                        cellEl.appendChild(badge);
+                    }
+                });
             }
 
             if (len === 1) {

@@ -157,14 +157,7 @@ io.on('connection', (socket) => {
 
     socket.on('game_action_move', (data) => {
         if (socket.roomId) {
-            io.to(socket.roomId).emit('game_token_moved', {
-                color: data.color,
-                tokenIdx: data.tokenIdx,
-                position: data.position,
-                isCapture: data.isCapture,
-                isFinished: data.isFinished,
-                targetCoords: data.targetCoords
-            });
+            io.to(socket.roomId).emit('game_token_moved', data);
         }
     });
 
