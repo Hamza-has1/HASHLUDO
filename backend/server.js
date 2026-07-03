@@ -73,11 +73,14 @@ io.on('connection', (socket) => {
         }
     });
 
-    socket.on('create_room', () => {
+    socket.on('create_room', (maxPlayers) => {
         const roomId = 'LUDO-' + Math.floor(1000 + Math.random() * 9000);
+        const playerLimit = parseInt(maxPlayers) || 4;
+        
         activeRooms[roomId] = {
             id: roomId,
-            players: [{ id: socket.id, name: socket.username || 'Guest', color: 'red' }],
+            players: [{ id: socket.id, name: socket.username || 'HostPlayer', color: 'red', isHost: true }],
+            maxPlayers: playerLimit,
             gameState: 'lobby',
             turnIdx: 0,
             diceRoll: null
@@ -89,15 +92,39 @@ io.on('connection', (socket) => {
 
     socket.on('join_room', (roomId) => {
         const room = activeRooms[roomId];
-        if (room && room.players.length < 4 && room.gameState === 'lobby') {
-            const colors = ['green', 'yellow', 'blue'];
-            const assignedColor = colors[room.players.length - 1] || 'blue';
-            room.players.push({ id: socket.id, name: socket.username || 'Guest', color: assignedColor });
-            socket.join(roomId);
-            socket.roomId = roomId;
-            io.to(roomId).emit('room_updated', room);
-        } else {
-            socket.emit('join_error', 'Room is full or doesn\'t exist');
+        if (!room) {
+            return socket.emit('join_error', 'Room Not Found');
+        }
+        if (room.gameState !== 'lobby') {
+            return socket.emit('join_error', 'Game Already Started');
+        }
+        if (room.players.length >= room.maxPlayers) {
+            return socket.emit('join_error', 'Room Full');
+        }
+
+        const colors = ['green', 'yellow', 'blue'];
+        const assignedColor = colors[room.players.length - 1] || 'blue';
+        
+        room.players.push({ 
+            id: socket.id, 
+            name: socket.username || ('Player_' + (room.players.length + 1)), 
+            color: assignedColor,
+            isHost: false
+        });
+        
+        socket.join(roomId);
+        socket.roomId = roomId;
+        io.to(roomId).emit('room_updated', room);
+    });
+
+    socket.on('start_game', () => {
+        const room = activeRooms[socket.roomId];
+        if (room && room.gameState === 'lobby') {
+            const player = room.players.find(p => p.id === socket.id);
+            if (player && player.isHost && room.players.length === room.maxPlayers) {
+                room.gameState = 'playing';
+                io.to(socket.roomId).emit('match_started', room);
+            }
         }
     });
 
@@ -118,13 +145,18 @@ io.on('connection', (socket) => {
 
     socket.on('disconnect', () => {
         console.log(`Socket disconnected: ${socket.id}`);
-        // Handle disconnect room cleanup
         if (socket.roomId && activeRooms[socket.roomId]) {
             const room = activeRooms[socket.roomId];
+            const leftPlayer = room.players.find(p => p.id === socket.id);
             room.players = room.players.filter(p => p.id !== socket.id);
+            
             if (room.players.length === 0) {
                 delete activeRooms[socket.roomId];
             } else {
+                // If Host disconnected and game hasn't started, assign a new host
+                if (leftPlayer && leftPlayer.isHost && room.gameState === 'lobby') {
+                    room.players[0].isHost = true;
+                }
                 io.to(socket.roomId).emit('room_updated', room);
             }
         }

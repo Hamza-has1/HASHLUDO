@@ -647,40 +647,61 @@
             <div class="overlay-content" tabindex="-1" style="max-width: 450px;">
                 <div class="overlay-header">
                     <h2 id="lobby-title" class="overlay-title">Online Arena</h2>
-                    <button class="btn-close-overlay" aria-label="Close Lobby Panel">&times;</button>
+                    <button class="btn-close-overlay" id="btn-close-lobby" aria-label="Close Lobby Panel">&times;</button>
                 </div>
                 <div style="display: flex; flex-direction: column; gap: 15px;">
-                    <!-- Matchmaking Queue Dashboard -->
-                    <div id="lobby-matchmaking-dashboard" style="text-align: center; padding: 20px 0; display: none;">
-                        <div class="dice-spinner" style="margin: 0 auto 20px auto; animation: rotateDice 2s infinite linear;" aria-hidden="true">
-                            <div class="dice-face front"></div>
-                            <div class="dice-face back"></div>
-                        </div>
-                        <h3 style="font-family: var(--font-heading); font-size: 1.4rem; margin-bottom: 5px;">Searching for Opponents...</h3>
-                        <p style="font-size:0.95rem; color: var(--text-muted); margin-bottom: 20px;" id="matchmaking-status-text">Searching... Queue size: 12</p>
-                        <button id="btn-cancel-matchmaking" class="btn-premium" style="width: 100%; border-color: rgba(255,59,48,0.2); color: var(--color-red);" type="button">Cancel Search</button>
+                    <!-- Main Selection: Create or Join -->
+                    <div id="lobby-choices" style="display: flex; flex-direction: column; gap: 12px;">
+                        <button id="btn-show-create-screen" class="btn-premium accent" type="button" style="width: 100%;">Create Room</button>
+                        <button id="btn-show-join-screen" class="btn-premium" type="button" style="width: 100%;">Join Room</button>
                     </div>
 
-                    <!-- Main Lobby Options -->
-                    <div id="lobby-main-options" style="display: flex; flex-direction: column; gap: 12px;">
-                        <button id="btn-start-matchmaking" class="btn-premium accent" type="button" style="width: 100%;">Quick Match (Auto-Find)</button>
-                        
-                        <div style="text-align: center; font-size: 0.8rem; color: var(--text-muted); margin: 5px 0;">-- OR DIRECT ROOM CONNECTION --</div>
-                        
-                        <div style="background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.04); padding: 15px; border-radius: 12px; display: flex; flex-direction: column; gap: 10px;">
-                            <label class="settings-label">Create Direct P2P Room</label>
-                            <button id="btn-create-lobby-room" class="btn-premium" style="font-size:1.15rem;" type="button">Generate Room Code</button>
-                            <div id="p2p-room-code-box" style="display: none; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.02); padding: 10px; border-radius: 8px; border: 1px dashed rgba(255,255,255,0.1);">
-                                <span style="font-family: monospace; font-size: 1.15rem; font-weight: 700; color: var(--color-yellow);" id="label-generated-room-code">LUDO-8821</span>
-                                <button id="btn-copy-room-code" style="background: none; border: none; color: var(--color-blue); font-weight: 700; cursor: pointer;" type="button">Copy Code</button>
+                    <!-- Create Room Screen -->
+                    <div id="lobby-create-screen" style="display: none; flex-direction: column; gap: 15px;">
+                        <div class="setup-group">
+                            <label class="settings-label" style="display: block; margin-bottom: 8px;">Select Number of Players</label>
+                            <select id="select-lobby-players" class="select-premium" style="width: 100%; padding: 10px; font-size: 1.05rem;">
+                                <option value="2">2 Players</option>
+                                <option value="3">3 Players</option>
+                                <option value="4" selected>4 Players</option>
+                            </select>
+                        </div>
+                        <button id="btn-confirm-create-room" class="btn-premium accent" type="button" style="width: 100%;">Generate Room</button>
+                        <button class="btn-premium btn-lobby-back" type="button" style="width: 100%;">Back</button>
+                    </div>
+
+                    <!-- Join Room Screen -->
+                    <div id="lobby-join-screen" style="display: none; flex-direction: column; gap: 15px;">
+                        <div class="setup-group">
+                            <label class="settings-label" for="input-lobby-code" style="display: block; margin-bottom: 8px;">Room Code</label>
+                            <input type="text" id="input-lobby-code" class="select-premium" placeholder="LUDO-6384" style="width: 100%; text-align: center; text-transform: uppercase; padding: 10px; font-size: 1.1rem;">
+                        </div>
+                        <button id="btn-confirm-join-room" class="btn-premium accent" type="button" style="width: 100%;">Join Room</button>
+                        <button class="btn-premium btn-lobby-back" type="button" style="width: 100%;">Back</button>
+                    </div>
+
+                    <!-- Active Lobby Room Dashboard -->
+                    <div id="lobby-active-room" style="display: none; flex-direction: column; gap: 15px;">
+                        <div style="background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.04); padding: 15px; border-radius: 12px; display: flex; flex-direction: column; gap: 10px; text-align: center;">
+                            <span class="settings-label">Room Code</span>
+                            <div style="display: flex; justify-content: center; align-items: center; gap: 10px; background: rgba(255,255,255,0.02); padding: 8px; border-radius: 8px; border: 1px dashed rgba(255,255,255,0.1);">
+                                <span style="font-family: monospace; font-size: 1.3rem; font-weight: 700; color: var(--color-yellow);" id="label-active-room-code">LUDO-XXXX</span>
+                                <button id="btn-copy-active-room-code" style="background: none; border: none; color: var(--color-blue); font-weight: 700; cursor: pointer; font-size: 0.95rem;" type="button">Copy</button>
                             </div>
                         </div>
 
-                        <div style="background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.04); padding: 15px; border-radius: 12px; display: flex; flex-direction: column; gap: 10px;">
-                            <label class="settings-label" for="input-join-room-code">Join Direct Room</label>
-                            <input type="text" id="input-join-room-code" class="select-premium" placeholder="Enter Room Code (e.g. LUDO-1234)" style="width: 100%; text-align: center; text-transform: uppercase;">
-                            <button id="btn-join-lobby-room" class="btn-premium accent" type="button" style="width: 100%;">Connect to Room</button>
+                        <div style="background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.04); padding: 15px; border-radius: 12px;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 10px; font-weight: 700;">
+                                <span>Players Joined</span>
+                                <span id="label-joined-ratio">1 / 4</span>
+                            </div>
+                            <div id="lobby-joined-players-list" style="display: flex; flex-direction: column; gap: 8px;">
+                                <!-- Dynamic player slots -->
+                            </div>
                         </div>
+
+                        <button id="btn-start-lobby-game" class="btn-premium accent" type="button" style="width: 100%;" disabled>Waiting for players...</button>
+                        <button id="btn-leave-lobby" class="btn-premium" style="width: 100%; border-color: rgba(255,59,48,0.2); color: var(--color-red);" type="button">Leave Room</button>
                     </div>
                 </div>
             </div>
@@ -791,6 +812,7 @@
     </script>
 
     <!-- Script imports at end of body to guarantee DOM availability -->
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
     <script src="js/config.js"></script>
     <script src="js/utils.js"></script>
     <script src="js/app.js"></script>

@@ -193,6 +193,7 @@ class LudoGameApp {
         this.gameMode = 'single'; // 'single', 'local', 'online'
         this.activePlayersCount = 4; // 2, 3, 4
         this.inactivePlayers = { red: false, green: false, yellow: false, blue: false };
+        this.socket = null;
 
         // Matchmaking queue settings
         this.matchmakingTimer = null;
@@ -425,71 +426,91 @@ class LudoGameApp {
             });
         }
 
-        // Matchmaking and P2P direct room buttons triggers
-        const btnStartMM = document.getElementById('btn-start-matchmaking');
-        const btnCancelMM = document.getElementById('btn-cancel-matchmaking');
-        const btnGenRoom = document.getElementById('btn-create-lobby-room');
-        const btnCopyRoom = document.getElementById('btn-copy-room-code');
-        const btnJoinRoom = document.getElementById('btn-join-lobby-room');
+        // Online Arena redesigned P2P room events
+        const btnShowCreate = document.getElementById('btn-show-create-screen');
+        const btnShowJoin = document.getElementById('btn-show-join-screen');
+        const btnConfirmCreate = document.getElementById('btn-confirm-create-room');
+        const btnConfirmJoin = document.getElementById('btn-confirm-join-room');
+        const btnCopyActiveCode = document.getElementById('btn-copy-active-room-code');
+        const btnStartLobby = document.getElementById('btn-start-lobby-game');
+        const btnLeaveLobby = document.getElementById('btn-leave-lobby');
 
-        if (btnStartMM) {
-            btnStartMM.addEventListener('click', () => {
+        if (btnShowCreate) {
+            btnShowCreate.addEventListener('click', () => {
                 this.playAudio('click');
-                this.startMatchmakingQueue();
+                document.getElementById('lobby-choices').style.display = 'none';
+                document.getElementById('lobby-create-screen').style.display = 'flex';
             });
         }
-        if (btnCancelMM) {
-            btnCancelMM.addEventListener('click', () => {
+
+        if (btnShowJoin) {
+            btnShowJoin.addEventListener('click', () => {
                 this.playAudio('click');
-                this.cancelMatchmakingQueue();
+                document.getElementById('lobby-choices').style.display = 'none';
+                document.getElementById('lobby-join-screen').style.display = 'flex';
             });
         }
-        if (btnGenRoom) {
-            btnGenRoom.addEventListener('click', () => {
+
+        document.querySelectorAll('.btn-lobby-back').forEach(btn => {
+            btn.addEventListener('click', () => {
                 this.playAudio('click');
-                const box = document.getElementById('p2p-room-code-box');
-                const label = document.getElementById('label-generated-room-code');
-                const code = 'LUDO-' + Math.floor(1000 + Math.random() * 9000);
-                if (label) label.textContent = code;
-                if (box) box.style.display = 'flex';
+                document.getElementById('lobby-create-screen').style.display = 'none';
+                document.getElementById('lobby-join-screen').style.display = 'none';
+                document.getElementById('lobby-choices').style.display = 'flex';
+            });
+        });
+
+        if (btnConfirmCreate) {
+            btnConfirmCreate.addEventListener('click', () => {
+                this.playAudio('click');
+                this.initSocketConnection();
+                const playersCount = document.getElementById('select-lobby-players').value;
+                this.socket.emit('create_room', playersCount);
             });
         }
-        if (btnCopyRoom) {
-            btnCopyRoom.addEventListener('click', () => {
+
+        if (btnConfirmJoin) {
+            btnConfirmJoin.addEventListener('click', () => {
                 this.playAudio('click');
-                const label = document.getElementById('label-generated-room-code');
-                if (label) {
-                    navigator.clipboard.writeText(label.textContent).then(() => {
-                        alert('Room code copied to clipboard!');
-                    });
-                }
-            });
-        }
-        if (btnJoinRoom) {
-            btnJoinRoom.addEventListener('click', () => {
-                this.playAudio('click');
-                const input = document.getElementById('input-join-room-code');
-                if (input && input.value.trim().toUpperCase().startsWith('LUDO-')) {
-                    this.closeOverlay('online-lobby-overlay');
-                    this.showToastNotification('Connecting to room...', 'blue');
-                    
-                    setTimeout(() => {
-                        this.gameMode = 'online';
-                        this.activePlayersCount = 4;
-                        this.inactivePlayers = { red: false, green: false, yellow: false, blue: false };
-                        this.isBotColor = { red: false, green: true, yellow: true, blue: true };
-                        this.playerNames = {
-                            red: 'Player 1 (You)',
-                            green: 'P2P Opponent 1',
-                            yellow: 'P2P Opponent 2',
-                            blue: 'P2P Opponent 3'
-                        };
-                        this.syncPlayerNamesToPanels();
-                        this.startGame();
-                    }, 1200);
+                const codeInput = document.getElementById('input-lobby-code');
+                const code = codeInput ? codeInput.value.trim().toUpperCase() : '';
+                if (code.startsWith('LUDO-')) {
+                    this.initSocketConnection();
+                    this.socket.emit('join_room', code);
                 } else {
-                    alert('Invalid room code! Code must start with LUDO-');
+                    alert('Invalid Room Code format! (e.g. LUDO-6384)');
                 }
+            });
+        }
+
+        if (btnCopyActiveCode) {
+            btnCopyActiveCode.addEventListener('click', () => {
+                this.playAudio('click');
+                const codeText = document.getElementById('label-active-room-code').textContent;
+                navigator.clipboard.writeText(codeText).then(() => {
+                    alert('Room Code copied to clipboard!');
+                });
+            });
+        }
+
+        if (btnStartLobby) {
+            btnStartLobby.addEventListener('click', () => {
+                this.playAudio('click');
+                if (this.socket) {
+                    this.socket.emit('start_game');
+                }
+            });
+        }
+
+        if (btnLeaveLobby) {
+            btnLeaveLobby.addEventListener('click', () => {
+                this.playAudio('click');
+                if (this.socket) {
+                    this.socket.disconnect();
+                    this.socket = null;
+                }
+                document.getElementById('lobby-active-room').style.display = 'none';
+                document.getElementById('lobby-choices').style.display = 'flex';
             });
         }
 
@@ -2473,6 +2494,116 @@ class LudoGameApp {
             });
         } else {
             document.exitFullscreen();
+        }
+    }
+
+    initSocketConnection() {
+        if (this.socket) return;
+
+        const url = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+            ? 'http://localhost:3000'
+            : 'https://hashludo-production.up.railway.app';
+            
+        this.socket = io(url);
+
+        this.socket.on('room_created', (room) => {
+            this.updateLobbyRoomUI(room);
+        });
+
+        this.socket.on('room_updated', (room) => {
+            this.updateLobbyRoomUI(room);
+        });
+
+        this.socket.on('join_error', (errorMsg) => {
+            alert('Error Joining Room: ' + errorMsg);
+            if (this.socket) {
+                this.socket.disconnect();
+                this.socket = null;
+            }
+        });
+
+        this.socket.on('match_started', (room) => {
+            this.closeOverlay('online-lobby-overlay');
+            this.showToastNotification('Match Started!', 'green');
+
+            this.gameMode = 'online';
+            this.activePlayersCount = room.maxPlayers;
+            this.inactivePlayers = { red: false, green: false, yellow: false, blue: false };
+            this.isBotColor = { red: false, green: false, yellow: false, blue: false };
+
+            const colors = ['red', 'green', 'yellow', 'blue'];
+            colors.forEach((color, idx) => {
+                const p = room.players[idx];
+                if (p) {
+                    this.playerNames[color] = p.name;
+                    this.isBotColor[color] = false;
+                } else {
+                    this.inactivePlayers[color] = true;
+                }
+            });
+
+            this.syncPlayerNamesToPanels();
+            this.startGame();
+        });
+    }
+
+    updateLobbyRoomUI(room) {
+        document.getElementById('lobby-create-screen').style.display = 'none';
+        document.getElementById('lobby-join-screen').style.display = 'none';
+        document.getElementById('lobby-choices').style.display = 'none';
+        document.getElementById('lobby-active-room').style.display = 'flex';
+
+        document.getElementById('label-active-room-code').textContent = room.id;
+        document.getElementById('label-joined-ratio').textContent = `${room.players.length} / ${room.maxPlayers}`;
+
+        const listContainer = document.getElementById('lobby-joined-players-list');
+        listContainer.innerHTML = '';
+
+        const isCurrentHost = room.players.find(p => p.id === this.socket.id)?.isHost || false;
+
+        for (let i = 0; i < room.maxPlayers; i++) {
+            const player = room.players[i];
+            const item = document.createElement('div');
+            item.style.display = 'flex';
+            item.style.justifyContent = 'space-between';
+            item.style.alignItems = 'center';
+            item.style.background = 'rgba(255,255,255,0.02)';
+            item.style.border = '1px solid rgba(255,255,255,0.04)';
+            item.style.padding = '8px 12px';
+            item.style.borderRadius = '8px';
+
+            if (player) {
+                item.innerHTML = `
+                    <span style="font-weight: 700;">${player.name} ${player.isHost ? '<span style="color:var(--color-yellow); font-size:0.8rem;">(Host)</span>' : ''}</span>
+                    <span style="color:var(--color-green);">Joined</span>
+                `;
+            } else {
+                item.innerHTML = `
+                    <span style="color:var(--text-muted); font-style:italic;">Waiting...</span>
+                    <span>--</span>
+                `;
+            }
+            listContainer.appendChild(item);
+        }
+
+        const startButton = document.getElementById('btn-start-lobby-game');
+        if (isCurrentHost) {
+            startButton.removeAttribute('disabled');
+            if (room.players.length === room.maxPlayers) {
+                startButton.textContent = 'Start Game';
+                startButton.style.opacity = '1';
+                startButton.style.cursor = 'pointer';
+            } else {
+                startButton.setAttribute('disabled', 'true');
+                startButton.textContent = 'Waiting for players...';
+                startButton.style.opacity = '0.5';
+                startButton.style.cursor = 'not-allowed';
+            }
+        } else {
+            startButton.setAttribute('disabled', 'true');
+            startButton.textContent = 'Waiting for Host to start...';
+            startButton.style.opacity = '0.5';
+            startButton.style.cursor = 'not-allowed';
         }
     }
 }
