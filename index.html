@@ -70,11 +70,6 @@
 
             <nav class="menu-buttons" aria-label="Main Menu Options" style="max-width:340px;">
                 <button id="btn-start-game" class="btn-premium accent" type="button" aria-label="Start Game Mode Selection" data-i18n="menu_start">Start Game</button>
-                <button id="btn-social" class="btn-premium" type="button" aria-label="Open Social Hub Friends List" data-i18n="menu_social">Social Hub</button>
-                <button id="btn-missions" class="btn-premium" type="button" aria-label="View Daily Missions and Tournaments" data-i18n="menu_missions">Missions & Events</button>
-                <button id="btn-season-pass" class="btn-premium" type="button" aria-label="View Season Pass Progression" data-i18n="menu_season">Season Pass</button>
-                <button id="btn-shop" class="btn-premium" type="button" aria-label="Open Customization Shop" data-i18n="menu_shop">Ludo Shop</button>
-                <button id="btn-stats" class="btn-premium" type="button" aria-label="View Statistics and Trophies" data-i18n="menu_stats">Stats & Trophies</button>
                 <button id="btn-settings" class="btn-premium" type="button" aria-label="Open Game Settings" data-i18n="menu_settings">Settings</button>
             </nav>
 
@@ -93,6 +88,7 @@
                     <span class="game-brand-title">LUDO <span class="accent-text" data-i18n="menu_subtitle">CHAMPION</span></span>
                 </div>
                 <div class="top-bar-right">
+                    <button id="btn-leave-game" class="btn-icon" title="Leave Game" aria-label="Leave Game and exit to menu" style="color: var(--color-red);">🚪</button>
                     <button id="btn-chat-trigger" class="btn-icon" title="Quick Chat" aria-label="Open Quick Chat panel">💬</button>
                     <button id="btn-sound-toggle" class="btn-icon" title="Toggle Sound" aria-label="Toggle Audio Sound">🔊</button>
                     <button id="btn-fullscreen-toggle" class="btn-icon" title="Toggle Fullscreen" aria-label="Toggle Fullscreen Mode">🖥️</button>
@@ -370,73 +366,97 @@
                     <h2 id="settings-title" class="overlay-title" data-i18n="menu_settings">Settings</h2>
                     <button class="btn-close-overlay" aria-label="Close Settings Panel">&times;</button>
                 </div>
-                <div class="settings-group">
-                    <div class="settings-row">
-                        <span class="settings-label" data-i18n="set_language">Language</span>
-                        <select id="settings-language" class="select-premium" style="width:130px;" aria-label="Language Selector">
-                            <option value="en">English</option>
-                            <option value="ur">اردو</option>
-                            <option value="ar">العربية</option>
-                            <option value="hi">हिन्दी</option>
-                            <option value="es">Español</option>
-                            <option value="fr">Français</option>
-                            <option value="tr">Türkçe</option>
-                            <option value="id">Bahasa</option>
-                        </select>
+                <div style="display: flex; flex-direction: column; gap: 15px;">
+                    <!-- Section 1: Gameplay Options -->
+                    <div class="settings-section">
+                        <div class="settings-section-title">Gameplay Configuration</div>
+                        <div class="settings-row">
+                            <span class="settings-label" data-i18n="set_language">Language</span>
+                            <select id="settings-language" class="select-premium" style="width:130px;" aria-label="Language Selector">
+                                <option value="en">English</option>
+                                <option value="ur">اردو</option>
+                                <option value="ar">العربية</option>
+                                <option value="hi">हिन्दी</option>
+                                <option value="es">Español</option>
+                                <option value="fr">Français</option>
+                                <option value="tr">Türkçe</option>
+                                <option value="id">Bahasa</option>
+                            </select>
+                        </div>
+                        <div class="settings-row">
+                            <span class="settings-label" data-i18n="set_theme">Active Theme</span>
+                            <select id="settings-theme" class="select-premium" style="width:130px;" aria-label="Board Theme Selector">
+                                <option value="classic">Classic Blue</option>
+                                <option value="neon">Cyber Neon</option>
+                                <option value="dark">Cosmic Dark</option>
+                                <option value="royal">Royal Gold</option>
+                                <option value="minimal">Minimal Ink</option>
+                            </select>
+                        </div>
+                        <div class="settings-row">
+                            <span class="settings-label">AI Difficulty</span>
+                            <select id="settings-difficulty" class="select-premium" style="width:130px;" aria-label="AI Difficulty Mode">
+                                <option value="easy">Easy</option>
+                                <option value="medium" selected>Medium</option>
+                                <option value="hard">Hard</option>
+                            </select>
+                        </div>
                     </div>
-                    <div class="settings-row">
-                        <span class="settings-label" data-i18n="set_theme">Active Theme</span>
-                        <select id="settings-theme" class="select-premium" style="width:130px;" aria-label="Board Theme Selector">
-                            <option value="classic">Classic Blue</option>
-                            <option value="neon">Cyber Neon</option>
-                            <option value="dark">Cosmic Dark</option>
-                            <option value="royal">Royal Gold</option>
-                            <option value="minimal">Minimal Ink</option>
-                        </select>
+
+                    <!-- Section 2: Audio & Feedback -->
+                    <div class="settings-section">
+                        <div class="settings-section-title">Audio & Haptics</div>
+                        <div class="settings-row">
+                            <span class="settings-label">Music Volume</span>
+                            <input type="range" id="settings-music-vol" min="0" max="100" value="50" style="width: 130px; accent-color: var(--color-blue);" aria-label="Music Volume Slider">
+                        </div>
+                        <div class="settings-row">
+                            <span class="settings-label">Effects Volume</span>
+                            <input type="range" id="settings-sfx-vol" min="0" max="100" value="70" style="width: 130px; accent-color: var(--color-blue);" aria-label="Effects Volume Slider">
+                        </div>
+                        <div class="settings-row">
+                            <span class="settings-label">Haptic Vibration</span>
+                            <label class="switch">
+                                <input type="checkbox" id="settings-vibration" checked aria-label="Haptic Vibration Switch">
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                        <div class="settings-row">
+                            <span class="settings-label">Particle Backdrop</span>
+                            <label class="switch">
+                                <input type="checkbox" id="settings-particles" checked aria-label="Particle Backdrop Switch">
+                                <span class="slider"></span>
+                            </label>
+                        </div>
                     </div>
-                    <div class="settings-row">
-                        <span class="settings-label" data-i18n="set_high_contrast">High Contrast</span>
-                        <label class="switch">
-                            <input type="checkbox" id="settings-high-contrast" aria-label="High Contrast Selector">
-                            <span class="slider"></span>
-                        </label>
+
+                    <!-- Section 3: Accessibility Options -->
+                    <div class="settings-section">
+                        <div class="settings-section-title">Accessibility</div>
+                        <div class="settings-row">
+                            <span class="settings-label" data-i18n="set_high_contrast">High Contrast</span>
+                            <label class="switch">
+                                <input type="checkbox" id="settings-high-contrast" aria-label="High Contrast Selector">
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                        <div class="settings-row">
+                            <span class="settings-label" data-i18n="set_reduced_motion">Reduced Motion</span>
+                            <label class="switch">
+                                <input type="checkbox" id="settings-reduced-motion" aria-label="Reduced Motion Selector">
+                                <span class="slider"></span>
+                            </label>
+                        </div>
                     </div>
-                    <div class="settings-row">
-                        <span class="settings-label" data-i18n="set_reduced_motion">Reduced Motion</span>
-                        <label class="switch">
-                            <input type="checkbox" id="settings-reduced-motion" aria-label="Reduced Motion Selector">
-                            <span class="slider"></span>
-                        </label>
-                    </div>
-                    <div class="settings-row">
-                        <span class="settings-label">Music Volume</span>
-                        <input type="range" id="settings-music-vol" min="0" max="100" value="50" style="width: 130px; accent-color: var(--color-blue);" aria-label="Music Volume Slider">
-                    </div>
-                    <div class="settings-row">
-                        <span class="settings-label">Effects Volume</span>
-                        <input type="range" id="settings-sfx-vol" min="0" max="100" value="70" style="width: 130px; accent-color: var(--color-blue);" aria-label="Effects Volume Slider">
-                    </div>
-                    <div class="settings-row">
-                        <span class="settings-label">AI Difficulty</span>
-                        <select id="settings-difficulty" class="select-premium" aria-label="AI Difficulty Mode">
-                            <option value="easy">Easy</option>
-                            <option value="medium" selected>Medium</option>
-                            <option value="hard">Hard</option>
-                        </select>
-                    </div>
-                    <div class="settings-row">
-                        <span class="settings-label">Haptic Vibration</span>
-                        <label class="switch">
-                            <input type="checkbox" id="settings-vibration" checked aria-label="Haptic Vibration Switch">
-                            <span class="slider"></span>
-                        </label>
-                    </div>
-                    <div class="settings-row">
-                        <span class="settings-label">Particle Effects</span>
-                        <label class="switch">
-                            <input type="checkbox" id="settings-particles" checked aria-label="Particle Backdrop Switch">
-                            <span class="slider"></span>
-                        </label>
+
+                    <!-- Section 4: Backup & Reset -->
+                    <div class="settings-section">
+                        <div class="settings-section-title">Profile Data & Diagnostics</div>
+                        <div style="display: flex; gap: 10px;">
+                            <button id="btn-export-backup" class="btn-premium" style="font-size: 0.95rem; padding: 10px 0; flex: 1;" type="button">Export JSON</button>
+                            <button id="btn-import-backup" class="btn-premium" style="font-size: 0.95rem; padding: 10px 0; flex: 1;" type="button">Import JSON</button>
+                        </div>
+                        <button id="btn-factory-reset" class="btn-premium" style="font-size: 0.95rem; padding: 10px 0; border-color: rgba(255,59,48,0.2); color: var(--color-red);" type="button">Factory Reset All Data</button>
                     </div>
                 </div>
             </div>
@@ -650,6 +670,12 @@
                     <button class="btn-close-overlay" id="btn-close-lobby" aria-label="Close Lobby Panel">&times;</button>
                 </div>
                 <div style="display: flex; flex-direction: column; gap: 15px;">
+                    <!-- Username Input (Entered first) -->
+                    <div class="setup-group" id="lobby-username-container" style="display: flex; flex-direction: column; gap: 8px;">
+                        <label class="settings-label" for="input-lobby-username">Enter Your Name</label>
+                        <input type="text" id="input-lobby-username" class="select-premium" placeholder="e.g. Hamza" style="width: 100%; text-align: center; padding: 10px; font-size: 1.1rem;">
+                    </div>
+
                     <!-- Main Selection: Create or Join -->
                     <div id="lobby-choices" style="display: flex; flex-direction: column; gap: 12px;">
                         <button id="btn-show-create-screen" class="btn-premium accent" type="button" style="width: 100%;">Create Room</button>
@@ -687,6 +713,17 @@
                             <div style="display: flex; justify-content: center; align-items: center; gap: 10px; background: rgba(255,255,255,0.02); padding: 8px; border-radius: 8px; border: 1px dashed rgba(255,255,255,0.1);">
                                 <span style="font-family: monospace; font-size: 1.3rem; font-weight: 700; color: var(--color-yellow);" id="label-active-room-code">LUDO-XXXX</span>
                                 <button id="btn-copy-active-room-code" style="background: none; border: none; color: var(--color-blue); font-weight: 700; cursor: pointer; font-size: 0.95rem;" type="button">Copy</button>
+                            </div>
+                        </div>
+
+                        <!-- 🎨 Lobby Color Selector Section -->
+                        <div style="background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.04); padding: 15px; border-radius: 12px; display: flex; flex-direction: column; gap: 8px;">
+                            <span class="settings-label" style="display:block; text-align:center;">Choose Your Color</span>
+                            <div id="lobby-color-picker" style="display: flex; justify-content: center; gap: 15px; margin-top: 5px;">
+                                <button class="color-select-btn" data-color="red" style="width: 40px; height: 40px; border-radius: 50%; background: var(--color-red); border: 2px solid transparent; cursor: pointer; position: relative;"></button>
+                                <button class="color-select-btn" data-color="green" style="width: 40px; height: 40px; border-radius: 50%; background: var(--color-green); border: 2px solid transparent; cursor: pointer; position: relative;"></button>
+                                <button class="color-select-btn" data-color="yellow" style="width: 40px; height: 40px; border-radius: 50%; background: var(--color-yellow); border: 2px solid transparent; cursor: pointer; position: relative;"></button>
+                                <button class="color-select-btn" data-color="blue" style="width: 40px; height: 40px; border-radius: 50%; background: var(--color-blue); border: 2px solid transparent; cursor: pointer; position: relative;"></button>
                             </div>
                         </div>
 

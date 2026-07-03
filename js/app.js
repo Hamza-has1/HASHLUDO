@@ -462,21 +462,33 @@ class LudoGameApp {
 
         if (btnConfirmCreate) {
             btnConfirmCreate.addEventListener('click', () => {
+                const usernameInput = document.getElementById('input-lobby-username');
+                const username = usernameInput ? usernameInput.value.trim() : '';
+                if (!username) {
+                    alert('Please enter a username first!');
+                    return;
+                }
                 this.playAudio('click');
                 this.initSocketConnection();
                 const playersCount = document.getElementById('select-lobby-players').value;
-                this.socket.emit('create_room', playersCount);
+                this.socket.emit('create_room', { maxPlayers: playersCount, username: username });
             });
         }
 
         if (btnConfirmJoin) {
             btnConfirmJoin.addEventListener('click', () => {
-                this.playAudio('click');
+                const usernameInput = document.getElementById('input-lobby-username');
+                const username = usernameInput ? usernameInput.value.trim() : '';
+                if (!username) {
+                    alert('Please enter a username first!');
+                    return;
+                }
                 const codeInput = document.getElementById('input-lobby-code');
                 const code = codeInput ? codeInput.value.trim().toUpperCase() : '';
                 if (code.startsWith('LUDO-')) {
+                    this.playAudio('click');
                     this.initSocketConnection();
-                    this.socket.emit('join_room', code);
+                    this.socket.emit('join_room', { roomId: code, username: username });
                 } else {
                     alert('Invalid Room Code format! (e.g. LUDO-6384)');
                 }
@@ -511,6 +523,23 @@ class LudoGameApp {
                 }
                 document.getElementById('lobby-active-room').style.display = 'none';
                 document.getElementById('lobby-choices').style.display = 'flex';
+                document.getElementById('lobby-username-container').style.display = 'flex';
+            });
+        }
+
+        // Setup Leave Game Button inside play view
+        const btnLeaveGame = document.getElementById('btn-leave-game');
+        if (btnLeaveGame) {
+            btnLeaveGame.addEventListener('click', () => {
+                if (confirm('Are you sure you want to leave the match?')) {
+                    this.playAudio('click');
+                    if (this.socket) {
+                        this.socket.emit('leave_game');
+                        this.socket.disconnect();
+                        this.socket = null;
+                    }
+                    window.location.reload();
+                }
             });
         }
 
@@ -1628,24 +1657,39 @@ class LudoGameApp {
         const btnRoll = document.getElementById('btn-roll-dice');
         const gameDice = document.getElementById('game-dice');
 
-        if (btnRoll) {
-            btnRoll.addEventListener('click', () => {
+        const handleRollClick = () => {
+            if (this.gameMode === 'online') {
+                const activeColor = this.getCurrentPlayerColor();
+                if (activeColor !== this.myOnlineColor || this.isBotColor[activeColor]) {
+                    return;
+                }
+                
+                if (this.isRolling || this.gameState !== 'playing' || this.hasPendingMove) return;
+
+                const rollValue = Math.floor(Math.random() * 6) + 1;
+                this.socket.emit('game_action_roll', { color: this.myOnlineColor, value: rollValue });
+            } else {
                 if (!this.isBotColor[this.getCurrentPlayerColor()]) {
                     this.rollActiveDice();
                 }
+            }
+        };
+
+        if (btnRoll) {
+            btnRoll.addEventListener('click', () => {
+                this.playAudio('click');
+                handleRollClick();
             });
         }
 
         if (gameDice) {
             gameDice.addEventListener('click', () => {
-                if (!this.isBotColor[this.getCurrentPlayerColor()]) {
-                    this.rollActiveDice();
-                }
+                handleRollClick();
             });
         }
     }
 
-    rollActiveDice() {
+    rollActiveDice(forcedValue = null) {
         if (this.isRolling || this.gameState !== 'playing' || this.hasPendingMove) return;
 
         this.isRolling = true;
@@ -1664,7 +1708,7 @@ class LudoGameApp {
         const activeColor = this.getCurrentPlayerColor();
         this.updatePlayerStatus(activeColor, 'Rolling...');
 
-        const rollValue = Math.floor(Math.random() * 6) + 1;
+        const rollValue = forcedValue !== null ? forcedValue : (Math.floor(Math.random() * 6) + 1);
         this.lastRollResult = rollValue;
 
         this.stats[activeColor].turnsPlayed++;
@@ -1706,18 +1750,40 @@ class LudoGameApp {
                     this.consecutiveSixes = 0;
                 }
                 
-                setTimeout(() => this.passTurn(), 1500);
+                setTimeout(() => {
+                    if (this.gameMode === 'online') {
+                        if (this.socket && this.isHostClient) {
+                            let nextIdx = this.currentPlayerIdx;
+                            do {
+                                nextIdx = (nextIdx + 1) % 4;
+                            } while (this.inactivePlayers[this.playersOrder[nextIdx]]);
+                            this.socket.emit('game_action_pass', { nextPlayerIdx: nextIdx });
+                        }
+                    } else {
+                        this.passTurn();
+                    }
+                }, 1500);
             } else {
                 this.hasPendingMove = true;
                 this.updatePlayerStatus(activeColor, 'Select Token');
 
-                if (!this.isBotColor[activeColor]) {
-                    this.highlightSelectableTokens(movableTokens);
+                if (this.gameMode === 'online') {
+                    if (activeColor === this.myOnlineColor && !this.isBotColor[activeColor]) {
+                        this.highlightSelectableTokens(movableTokens);
+                    } else if (this.isBotColor[activeColor] && this.isHostClient) {
+                        const thinkingDelay = 1200 + Math.random() * 800;
+                        setTimeout(() => {
+                            this.playBotDecision(activeColor, rollValue, movableTokens);
+                        }, thinkingDelay);
+                    }
                 } else {
-                    const thinkingDelay = this.gameMode === 'online' ? (1200 + Math.random() * 800) : 800;
-                    setTimeout(() => {
-                        this.playBotDecision(activeColor, rollValue, movableTokens);
-                    }, thinkingDelay);
+                    if (!this.isBotColor[activeColor]) {
+                        this.highlightSelectableTokens(movableTokens);
+                    } else {
+                        setTimeout(() => {
+                            this.playBotDecision(activeColor, rollValue, movableTokens);
+                        }, 800);
+                    }
                 }
             }
 
@@ -1726,6 +1792,10 @@ class LudoGameApp {
 
     playBotTurn() {
         if (this.gameState !== 'playing') return;
+
+        if (this.gameMode === 'online' && !this.isHostClient) {
+            return;
+        }
 
         const activeColor = this.getCurrentPlayerColor();
         this.updatePlayerStatus(activeColor, 'Thinking...');
@@ -1741,7 +1811,12 @@ class LudoGameApp {
         }
 
         setTimeout(() => {
-            this.rollActiveDice();
+            if (this.gameMode === 'online') {
+                const rollValue = Math.floor(Math.random() * 6) + 1;
+                this.socket.emit('game_action_roll', { color: activeColor, value: rollValue });
+            } else {
+                this.rollActiveDice();
+            }
         }, rollDelay);
     }
 
@@ -1755,10 +1830,24 @@ class LudoGameApp {
             bestToken.element.classList.add('selectable');
             setTimeout(() => {
                 bestToken.element.classList.remove('selectable');
-                this.animateTokenMove(bestToken, rollValue);
+                if (this.gameMode === 'online') {
+                    this.socket.emit('game_action_move', { color: bestToken.color, tokenIdx: bestToken.id, steps: rollValue });
+                } else {
+                    this.animateTokenMove(bestToken, rollValue);
+                }
             }, 600);
         } else {
-            this.passTurn();
+            if (this.gameMode === 'online') {
+                if (this.isHostClient) {
+                    let nextIdx = this.currentPlayerIdx;
+                    do {
+                        nextIdx = (nextIdx + 1) % 4;
+                    } while (this.inactivePlayers[this.playersOrder[nextIdx]]);
+                    this.socket.emit('game_action_pass', { nextPlayerIdx: nextIdx });
+                }
+            } else {
+                this.passTurn();
+            }
         }
     }
 
@@ -1962,6 +2051,10 @@ class LudoGameApp {
         if (!this.hasPendingMove || token.color !== this.getCurrentPlayerColor()) return;
         if (this.isBotColor[token.color]) return;
 
+        if (this.gameMode === 'online') {
+            if (token.color !== this.myOnlineColor) return;
+        }
+
         const movableList = this.getMovableTokens(token.color, this.lastRollResult);
         const isMovable = movableList.some(t => t.id === token.id);
         
@@ -1971,7 +2064,12 @@ class LudoGameApp {
         this.hasPendingMove = false;
 
         const rollValue = this.lastRollResult;
-        this.animateTokenMove(token, rollValue);
+
+        if (this.gameMode === 'online') {
+            this.socket.emit('game_action_move', { color: token.color, tokenIdx: token.id, steps: rollValue });
+        } else {
+            this.animateTokenMove(token, rollValue);
+        }
     }
 
     async animateTokenMove(token, steps) {
@@ -2352,6 +2450,29 @@ class LudoGameApp {
         if (activeDot) {
             activeDot.className = `active-dot dot-${activeColor}`;
         }
+
+        // Disable dice button for other players in online mode
+        const btnRoll = document.getElementById('btn-roll-dice');
+        if (btnRoll) {
+            if (this.gameMode === 'online') {
+                if (activeColor === this.myOnlineColor && !this.isBotColor[activeColor]) {
+                    btnRoll.disabled = false;
+                    btnRoll.textContent = 'Roll Dice';
+                    btnRoll.style.opacity = '1';
+                    btnRoll.style.cursor = 'pointer';
+                } else {
+                    btnRoll.disabled = true;
+                    btnRoll.textContent = `Waiting for ${this.playerNames[activeColor]}...`;
+                    btnRoll.style.opacity = '0.6';
+                    btnRoll.style.cursor = 'not-allowed';
+                }
+            } else {
+                btnRoll.disabled = false;
+                btnRoll.textContent = 'Roll Dice';
+                btnRoll.style.opacity = '1';
+                btnRoll.style.cursor = 'pointer';
+            }
+        }
     }
 
     updatePlayerStatus(color, status) {
@@ -2515,7 +2636,7 @@ class LudoGameApp {
         });
 
         this.socket.on('join_error', (errorMsg) => {
-            alert('Error Joining Room: ' + errorMsg);
+            alert('Error: ' + errorMsg);
             if (this.socket) {
                 this.socket.disconnect();
                 this.socket = null;
@@ -2528,22 +2649,71 @@ class LudoGameApp {
 
             this.gameMode = 'online';
             this.activePlayersCount = room.maxPlayers;
-            this.inactivePlayers = { red: false, green: false, yellow: false, blue: false };
-            this.isBotColor = { red: false, green: false, yellow: false, blue: false };
+            
+            // Find my client color & host role
+            const myPlayer = room.players.find(p => p.id === this.socket.id);
+            this.myOnlineColor = myPlayer ? myPlayer.color : 'red';
+            this.isHostClient = myPlayer ? myPlayer.isHost : false;
 
+            // Reset slots and configurations
             const colors = ['red', 'green', 'yellow', 'blue'];
-            colors.forEach((color, idx) => {
-                const p = room.players[idx];
-                if (p) {
-                    this.playerNames[color] = p.name;
-                    this.isBotColor[color] = false;
-                } else {
-                    this.inactivePlayers[color] = true;
-                }
+            colors.forEach(c => {
+                this.inactivePlayers[c] = true;
+                this.isBotColor[c] = true;
+            });
+
+            room.players.forEach(p => {
+                this.playerNames[p.color] = p.name;
+                this.isBotColor[p.color] = p.isBot;
+                this.inactivePlayers[p.color] = false;
             });
 
             this.syncPlayerNamesToPanels();
             this.startGame();
+        });
+
+        this.socket.on('game_dice_rolled', (data) => {
+            this.rollActiveDice(data.value);
+        });
+
+        this.socket.on('game_token_moved', (data) => {
+            const token = this.tokens[data.color][data.tokenIdx];
+            if (token) {
+                this.animateTokenMove(token, data.steps);
+            }
+        });
+
+        this.socket.on('game_turn_passed', (data) => {
+            this.currentPlayerIdx = data.nextPlayerIdx;
+            this.isRolling = false;
+            this.hasPendingMove = false;
+            
+            const btnRoll = document.getElementById('btn-roll-dice');
+            if (btnRoll) btnRoll.disabled = false;
+
+            this.updateActivePlayerUI();
+
+            const activeColor = this.getCurrentPlayerColor();
+            if (this.isBotColor[activeColor] && this.isHostClient) {
+                this.playBotTurn();
+            }
+        });
+
+        this.socket.on('player_left_game', (data) => {
+            this.showToastNotification(`${data.name} left. Bot takeover!`, 'red');
+            this.logFeedMessage(`${data.name} (${data.color}) has disconnected. AI Bot took control.`);
+            this.isBotColor[data.color] = true;
+        });
+
+        // Bind Lobby Color click actions once
+        document.querySelectorAll('.color-select-btn').forEach(btn => {
+            btn.onclick = () => {
+                const color = btn.getAttribute('data-color');
+                if (this.socket && !btn.classList.contains('disabled')) {
+                    this.playAudio('click');
+                    this.socket.emit('select_color', color);
+                }
+            };
         });
     }
 
@@ -2552,6 +2722,7 @@ class LudoGameApp {
         document.getElementById('lobby-join-screen').style.display = 'none';
         document.getElementById('lobby-choices').style.display = 'none';
         document.getElementById('lobby-active-room').style.display = 'flex';
+        document.getElementById('lobby-username-container').style.display = 'none';
 
         document.getElementById('label-active-room-code').textContent = room.id;
         document.getElementById('label-joined-ratio').textContent = `${room.players.length} / ${room.maxPlayers}`;
@@ -2559,8 +2730,11 @@ class LudoGameApp {
         const listContainer = document.getElementById('lobby-joined-players-list');
         listContainer.innerHTML = '';
 
-        const isCurrentHost = room.players.find(p => p.id === this.socket.id)?.isHost || false;
+        const myPlayer = room.players.find(p => p.id === this.socket.id);
+        const myColor = myPlayer ? myPlayer.color : null;
+        const isCurrentHost = myPlayer ? myPlayer.isHost : false;
 
+        // Render joined players list
         for (let i = 0; i < room.maxPlayers; i++) {
             const player = room.players[i];
             const item = document.createElement('div');
@@ -2574,8 +2748,11 @@ class LudoGameApp {
 
             if (player) {
                 item.innerHTML = `
-                    <span style="font-weight: 700;">${player.name} ${player.isHost ? '<span style="color:var(--color-yellow); font-size:0.8rem;">(Host)</span>' : ''}</span>
-                    <span style="color:var(--color-green);">Joined</span>
+                    <span style="font-weight: 700; display:flex; align-items:center; gap:8px;">
+                        <span style="width:10px; height:10px; border-radius:50%; background:var(--color-${player.color}); display:inline-block;"></span>
+                        ${player.name} ${player.isHost ? '<span style="color:var(--color-yellow); font-size:0.8rem;">(Host)</span>' : ''}
+                    </span>
+                    <span style="color:var(--color-green); font-size:0.9rem;">Joined</span>
                 `;
             } else {
                 item.innerHTML = `
@@ -2586,6 +2763,20 @@ class LudoGameApp {
             listContainer.appendChild(item);
         }
 
+        // Render color selector picker state
+        const takenColors = room.players.map(p => p.color);
+        document.querySelectorAll('.color-select-btn').forEach(btn => {
+            const color = btn.getAttribute('data-color');
+            btn.className = 'color-select-btn'; // Reset
+            
+            if (color === myColor) {
+                btn.classList.add('selected');
+            } else if (takenColors.includes(color)) {
+                btn.classList.add('disabled');
+            }
+        });
+
+        // Setup Start Match Button
         const startButton = document.getElementById('btn-start-lobby-game');
         if (isCurrentHost) {
             startButton.removeAttribute('disabled');

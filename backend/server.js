@@ -73,13 +73,14 @@ io.on('connection', (socket) => {
         }
     });
 
-    socket.on('create_room', (maxPlayers) => {
+    socket.on('create_room', (data) => {
         const roomId = 'LUDO-' + Math.floor(1000 + Math.random() * 9000);
-        const playerLimit = parseInt(maxPlayers) || 4;
+        const playerLimit = parseInt(data.maxPlayers) || 4;
+        socket.username = data.username || 'HostPlayer';
         
         activeRooms[roomId] = {
             id: roomId,
-            players: [{ id: socket.id, name: socket.username || 'HostPlayer', color: 'red', isHost: true }],
+            players: [{ id: socket.id, name: socket.username, color: 'red', isHost: true, isBot: false }],
             maxPlayers: playerLimit,
             gameState: 'lobby',
             turnIdx: 0,
@@ -90,7 +91,8 @@ io.on('connection', (socket) => {
         socket.emit('room_created', activeRooms[roomId]);
     });
 
-    socket.on('join_room', (roomId) => {
+    socket.on('join_room', (data) => {
+        const roomId = data.roomId;
         const room = activeRooms[roomId];
         if (!room) {
             return socket.emit('join_error', 'Room Not Found');
@@ -102,19 +104,38 @@ io.on('connection', (socket) => {
             return socket.emit('join_error', 'Room Full');
         }
 
-        const colors = ['green', 'yellow', 'blue'];
-        const assignedColor = colors[room.players.length - 1] || 'blue';
+        socket.username = data.username || ('Player_' + (room.players.length + 1));
+        
+        // Auto-assign first available color
+        const takenColors = room.players.map(p => p.color);
+        const colors = ['red', 'green', 'yellow', 'blue'];
+        const assignedColor = colors.find(c => !takenColors.includes(c)) || 'blue';
         
         room.players.push({ 
             id: socket.id, 
-            name: socket.username || ('Player_' + (room.players.length + 1)), 
+            name: socket.username, 
             color: assignedColor,
-            isHost: false
+            isHost: false,
+            isBot: false
         });
         
         socket.join(roomId);
         socket.roomId = roomId;
         io.to(roomId).emit('room_updated', room);
+    });
+
+    socket.on('select_color', (color) => {
+        const room = activeRooms[socket.roomId];
+        if (room && room.gameState === 'lobby') {
+            const isTaken = room.players.some(p => p.color === color && p.id !== socket.id);
+            if (!isTaken) {
+                const player = room.players.find(p => p.id === socket.id);
+                if (player) {
+                    player.color = color;
+                    io.to(socket.roomId).emit('room_updated', room);
+                }
+            }
+        }
     });
 
     socket.on('start_game', () => {
@@ -128,12 +149,28 @@ io.on('connection', (socket) => {
         }
     });
 
-    socket.on('roll_dice', () => {
-        const room = activeRooms[socket.roomId];
-        if (room && room.gameState === 'playing') {
-            const rollValue = Math.floor(Math.random() * 6) + 1;
-            room.diceRoll = rollValue;
-            io.to(socket.roomId).emit('dice_rolled', { roller: socket.id, value: rollValue });
+    socket.on('game_action_roll', (data) => {
+        if (socket.roomId) {
+            io.to(socket.roomId).emit('game_dice_rolled', { color: data.color, value: data.value });
+        }
+    });
+
+    socket.on('game_action_move', (data) => {
+        if (socket.roomId) {
+            io.to(socket.roomId).emit('game_token_moved', {
+                color: data.color,
+                tokenIdx: data.tokenIdx,
+                position: data.position,
+                isCapture: data.isCapture,
+                isFinished: data.isFinished,
+                targetCoords: data.targetCoords
+            });
+        }
+    });
+
+    socket.on('game_action_pass', (data) => {
+        if (socket.roomId) {
+            io.to(socket.roomId).emit('game_turn_passed', { nextPlayerIdx: data.nextPlayerIdx });
         }
     });
 
@@ -143,25 +180,65 @@ io.on('connection', (socket) => {
         }
     });
 
+    socket.on('leave_game', () => {
+        handlePlayerExit(socket);
+    });
+
     socket.on('disconnect', () => {
         console.log(`Socket disconnected: ${socket.id}`);
-        if (socket.roomId && activeRooms[socket.roomId]) {
-            const room = activeRooms[socket.roomId];
-            const leftPlayer = room.players.find(p => p.id === socket.id);
+        handlePlayerExit(socket);
+    });
+});
+
+function handlePlayerExit(socket) {
+    if (socket.roomId && activeRooms[socket.roomId]) {
+        const room = activeRooms[socket.roomId];
+        const leftPlayer = room.players.find(p => p.id === socket.id);
+        if (!leftPlayer) return;
+
+        if (room.gameState === 'lobby') {
             room.players = room.players.filter(p => p.id !== socket.id);
-            
             if (room.players.length === 0) {
                 delete activeRooms[socket.roomId];
             } else {
-                // If Host disconnected and game hasn't started, assign a new host
-                if (leftPlayer && leftPlayer.isHost && room.gameState === 'lobby') {
+                if (leftPlayer.isHost) {
                     room.players[0].isHost = true;
                 }
                 io.to(socket.roomId).emit('room_updated', room);
             }
+        } else {
+            // Game is playing: convert to bot takeover
+            leftPlayer.isBot = true;
+            leftPlayer.id = null; // Unlink socket ID
+            
+            // Notify remaining players
+            io.to(socket.roomId).emit('player_left_game', { 
+                name: leftPlayer.name, 
+                color: leftPlayer.color 
+            });
+
+            // If the leaving player was host, migrate to next remaining human
+            if (leftPlayer.isHost) {
+                leftPlayer.isHost = false;
+                const nextHuman = room.players.find(p => p.id && p.id !== socket.id && !p.isBot);
+                if (nextHuman) {
+                    nextHuman.isHost = true;
+                }
+            }
+
+            // Check if all players are bots now
+            const allBots = room.players.every(p => p.isBot);
+            if (allBots) {
+                delete activeRooms[socket.roomId];
+            } else {
+                io.to(socket.roomId).emit('room_updated', room);
+            }
         }
-    });
-});
+        
+        socket.leave(socket.roomId);
+        socket.roomId = null;
+    }
+}
 
 server.listen(PORT, () => {
     console.log(`Ludo game server running on port ${PORT}`);
