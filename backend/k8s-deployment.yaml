@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ludo-backend-deployment
+  labels:
+    app: ludo-backend
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: ludo-backend
+  template:
+    metadata:
+      labels:
+        app: ludo-backend
+    spec:
+      containers:
+      - name: backend
+        image: ludo-backend:latest
+        ports:
+        - containerPort: 3000
+        env:
+        - name: PORT
+          value: "3000"
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: jwt-secret
+              key: secret
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ludo-backend-service
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 80
+    targetPort: 3000
+  selector:
+    app: ludo-backend

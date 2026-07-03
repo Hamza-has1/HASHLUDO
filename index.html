@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="description" content="A premium HTML5 Ludo board game featuring smooth animations, responsive styles, local multiplayer, and AI bots.">
+    <title>Ludo Champion - Premium Board Game</title>
+    
+    <script>
+    window.onerror = function(message, source, lineno, colno, error) {
+        const msg = message + '\nLine: ' + lineno + '\nFile: ' + source;
+        alert('JS Debug Info:\n' + msg);
+        setTimeout(() => {
+            const loadingText = document.querySelector('.loading-text');
+            if (loadingText) {
+                loadingText.innerHTML = '<span style="color:#ff3b30; font-size: 0.9rem;">Error: ' + message + ' (Line ' + lineno + ')</span>';
+            }
+        }, 100);
+        return false;
+    };
+    </script>
+
+    <!-- Link PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#007aff">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%2307070a'/><circle cx='50' cy='50' r='25' fill='%23007aff'/><text x='50' y='58' font-size='26' font-family='sans-serif' font-weight='bold' fill='white' text-anchor='middle'>L</text></svg>">
+
+    <!-- Link Stylesheets -->
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/responsive.css">
+</head>
+<body>
+
+    <!-- 🌌 Dynamic Ambient Background Particles -->
+    <canvas id="bg-particles" aria-hidden="true"></canvas>
+
+    <!-- 🔔 Dynamic Toast Alerts/Notifications Container -->
+    <div id="toast-container" class="toast-container" aria-live="polite"></div>
+
+    <!-- 📱 Core App Container -->
+    <div id="app-container">
+
+        <!-- 🌀 Loading Screen -->
+        <section id="loading-screen" class="game-screen active" aria-label="Loading Screen">
+            <div class="loader-container">
+                <!-- 3D Dice Spinner -->
+                <div class="dice-spinner" aria-hidden="true">
+                    <div class="dice-face front"></div>
+                    <div class="dice-face back"></div>
+                    <div class="dice-face left"></div>
+                    <div class="dice-face right"></div>
+                    <div class="dice-face top"></div>
+                    <div class="dice-face bottom"></div>
+                </div>
+                <div class="loading-progress-bar">
+                    <div class="loading-progress-fill"></div>
+                </div>
+                <div class="loading-text" data-i18n="loading_msg">Preparing Board...</div>
+            </div>
+        </section>
+
+        <!-- 🎮 Main Menu Screen -->
+        <section id="menu-screen" class="game-screen" aria-hidden="true" aria-label="Main Menu">
+            <div class="logo-container">
+                <h1 class="game-title">Ludo</h1>
+                <div class="game-subtitle" data-i18n="menu_subtitle">CHAMPION</div>
+            </div>
+
+            <nav class="menu-buttons" aria-label="Main Menu Options" style="max-width:340px;">
+                <button id="btn-start-game" class="btn-premium accent" type="button" aria-label="Start Game Mode Selection" data-i18n="menu_start">Start Game</button>
+                <button id="btn-social" class="btn-premium" type="button" aria-label="Open Social Hub Friends List" data-i18n="menu_social">Social Hub</button>
+                <button id="btn-missions" class="btn-premium" type="button" aria-label="View Daily Missions and Tournaments" data-i18n="menu_missions">Missions & Events</button>
+                <button id="btn-season-pass" class="btn-premium" type="button" aria-label="View Season Pass Progression" data-i18n="menu_season">Season Pass</button>
+                <button id="btn-shop" class="btn-premium" type="button" aria-label="Open Customization Shop" data-i18n="menu_shop">Ludo Shop</button>
+                <button id="btn-stats" class="btn-premium" type="button" aria-label="View Statistics and Trophies" data-i18n="menu_stats">Stats & Trophies</button>
+                <button id="btn-settings" class="btn-premium" type="button" aria-label="Open Game Settings" data-i18n="menu_settings">Settings</button>
+            </nav>
+
+            <footer class="menu-footer">
+                Version 1.0.0-release &copy; 2026
+            </footer>
+        </section>
+
+        <!-- 🎲 Game Play Screen -->
+        <section id="game-play-screen" class="game-screen" aria-hidden="true" aria-label="Ludo Game Board Screen">
+            
+            <!-- 🔝 Top Bar Component -->
+            <header class="top-bar">
+                <div class="top-bar-left">
+                    <span class="game-logo-icon" aria-hidden="true">🎲</span>
+                    <span class="game-brand-title">LUDO <span class="accent-text" data-i18n="menu_subtitle">CHAMPION</span></span>
+                </div>
+                <div class="top-bar-right">
+                    <button id="btn-chat-trigger" class="btn-icon" title="Quick Chat" aria-label="Open Quick Chat panel">💬</button>
+                    <button id="btn-sound-toggle" class="btn-icon" title="Toggle Sound" aria-label="Toggle Audio Sound">🔊</button>
+                    <button id="btn-fullscreen-toggle" class="btn-icon" title="Toggle Fullscreen" aria-label="Toggle Fullscreen Mode">🖥️</button>
+                    <button id="btn-pause-game" class="btn-icon" title="Pause Game" aria-label="Pause Game play">⏸️</button>
+                    <button id="btn-game-settings" class="btn-icon" title="Game Settings" aria-label="Open Settings panel">⚙️</button>
+                </div>
+            </header>
+
+            <!-- 🎯 Main Game Play Area -->
+            <div class="game-play-area" id="main-play-viewport">
+                
+                <!-- Left-side Player Panels Wrapper -->
+                <div class="side-panels left-panels">
+                    <!-- Red Player Panel -->
+                    <article class="player-panel red-panel active" id="panel-red" aria-live="polite" style="position: relative;">
+                        <div class="chat-bubble-popup" id="chat-pop-red"></div>
+                        <div class="player-header">
+                            <div class="player-avatar" id="avatar-red" aria-hidden="true">🔴</div>
+                            <div class="player-info">
+                                <h3 class="player-name" id="name-red">Player 1 (Red)</h3>
+                                <span class="player-status" data-i18n="turn_active">Your Turn</span>
+                            </div>
+                        </div>
+                        <div class="network-latency-indicator" id="latency-red" style="font-size:0.7rem; color:var(--text-muted); margin-bottom: 6px; display: none;">Ping: 25ms <span style="color:var(--color-green);">●</span></div>
+                        <div class="player-stats">
+                            <div class="stat-box">
+                                <span class="stat-label" data-i18n="stat_label_1">Home / Board / Win</span>
+                                <span class="stat-value" id="stats-red">4 / 0 / 0</span>
+                            </div>
+                            <div class="stat-box">
+                                <span class="stat-label" data-i18n="stat_label_2">Turns / Caps</span>
+                                <span class="stat-value" id="extra-stats-red">0 / 0</span>
+                            </div>
+                        </div>
+                    </article>
+
+                    <!-- Green Player Panel -->
+                    <article class="player-panel green-panel" id="panel-green" aria-live="polite" style="position: relative;">
+                        <div class="chat-bubble-popup" id="chat-pop-green"></div>
+                        <div class="player-header">
+                            <div class="player-avatar" id="avatar-green" aria-hidden="true">🟢</div>
+                            <div class="player-info">
+                                <h3 class="player-name" id="name-green">Player 2 (Green)</h3>
+                                <span class="player-status" data-i18n="turn_waiting">Waiting...</span>
+                            </div>
+                        </div>
+                        <div class="network-latency-indicator" id="latency-green" style="font-size:0.7rem; color:var(--text-muted); margin-bottom: 6px; display: none;">Ping: -- <span style="color:var(--text-muted);">●</span></div>
+                        <div class="player-stats">
+                            <div class="stat-box">
+                                <span class="stat-label" data-i18n="stat_label_1">Home / Board / Win</span>
+                                <span class="stat-value" id="stats-green">4 / 0 / 0</span>
+                            </div>
+                            <div class="stat-box">
+                                <span class="stat-label" data-i18n="stat_label_2">Turns / Caps</span>
+                                <span class="stat-value" id="extra-stats-green">0 / 0</span>
+                            </div>
+                        </div>
+                    </article>
+                </div>
+
+                <!-- 🏁 Central Ludo Board container -->
+                <div class="board-wrapper">
+                    <div id="ludo-board" aria-label="Ludo 15 by 15 Grid Board">
+                        <!-- Left-Top: Green Home Area -->
+                        <div class="home-area green-home-zone" id="home-green" aria-label="Green Home Area">
+                            <div class="home-inner">
+                                <div class="token-slot green-slot" data-index="0" aria-label="Green Token Slot 1">
+                                    <div class="ludo-token token-green" id="token-green-0" data-color="green" data-id="0" role="button" aria-label="Green Token 1" tabindex="0"></div>
+                                </div>
+                                <div class="token-slot green-slot" data-index="1" aria-label="Green Token Slot 2">
+                                    <div class="ludo-token token-green" id="token-green-1" data-color="green" data-id="1" role="button" aria-label="Green Token 2" tabindex="0"></div>
+                                </div>
+                                <div class="token-slot green-slot" data-index="2" aria-label="Green Token Slot 3">
+                                    <div class="ludo-token token-green" id="token-green-2" data-color="green" data-id="2" role="button" aria-label="Green Token 3" tabindex="0"></div>
+                                </div>
+                                <div class="token-slot green-slot" data-index="3" aria-label="Green Token Slot 4">
+                                    <div class="ludo-token token-green" id="token-green-3" data-color="green" data-id="3" role="button" aria-label="Green Token 4" tabindex="0"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Right-Top: Yellow Home Area -->
+                        <div class="home-area yellow-home-zone" id="home-yellow" aria-label="Yellow Home Area">
+                            <div class="home-inner">
+                                <div class="token-slot yellow-slot" data-index="0" aria-label="Yellow Token Slot 1">
+                                    <div class="ludo-token token-yellow" id="token-yellow-0" data-color="yellow" data-id="0" role="button" aria-label="Yellow Token 1" tabindex="0"></div>
+                                </div>
+                                <div class="token-slot yellow-slot" data-index="1" aria-label="Yellow Token Slot 2">
+                                    <div class="ludo-token token-yellow" id="token-yellow-1" data-color="yellow" data-id="1" role="button" aria-label="Yellow Token 2" tabindex="0"></div>
+                                </div>
+                                <div class="token-slot yellow-slot" data-index="2" aria-label="Yellow Token Slot 3">
+                                    <div class="ludo-token token-yellow" id="token-yellow-2" data-color="yellow" data-id="2" role="button" aria-label="Yellow Token 3" tabindex="0"></div>
+                                </div>
+                                <div class="token-slot yellow-slot" data-index="3" aria-label="Yellow Token Slot 4">
+                                    <div class="ludo-token token-yellow" id="token-yellow-3" data-color="yellow" data-id="3" role="button" aria-label="Yellow Token 4" tabindex="0"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Left-Bottom: Red Home Area -->
+                        <div class="home-area red-home-zone" id="home-red" aria-label="Red Home Area">
+                            <div class="home-inner">
+                                <div class="token-slot red-slot" data-index="0" aria-label="Red Token Slot 1">
+                                    <div class="ludo-token token-red" id="token-red-0" data-color="red" data-id="0" role="button" aria-label="Red Token 1" tabindex="0"></div>
+                                </div>
+                                <div class="token-slot red-slot" data-index="1" aria-label="Red Token Slot 2">
+                                    <div class="ludo-token token-red" id="token-red-1" data-color="red" data-id="1" role="button" aria-label="Red Token 2" tabindex="0"></div>
+                                </div>
+                                <div class="token-slot red-slot" data-index="2" aria-label="Red Token Slot 3">
+                                    <div class="ludo-token token-red" id="token-red-2" data-color="red" data-id="2" role="button" aria-label="Red Token 3" tabindex="0"></div>
+                                </div>
+                                <div class="token-slot red-slot" data-index="3" aria-label="Red Token Slot 4">
+                                    <div class="ludo-token token-red" id="token-red-3" data-color="red" data-id="3" role="button" aria-label="Red Token 4" tabindex="0"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Right-Bottom: Blue Home Area -->
+                        <div class="home-area blue-home-zone" id="home-blue" aria-label="Blue Home Area">
+                            <div class="home-inner">
+                                <div class="token-slot blue-slot" data-index="0" aria-label="Blue Token Slot 1">
+                                    <div class="ludo-token token-blue" id="token-blue-0" data-color="blue" data-id="0" role="button" aria-label="Blue Token 1" tabindex="0"></div>
+                                </div>
+                                <div class="token-slot blue-slot" data-index="1" aria-label="Blue Token Slot 2">
+                                    <div class="ludo-token token-blue" id="token-blue-1" data-color="blue" data-id="1" role="button" aria-label="Blue Token 2" tabindex="0"></div>
+                                </div>
+                                <div class="token-slot blue-slot" data-index="2" aria-label="Blue Token Slot 3">
+                                    <div class="ludo-token token-blue" id="token-blue-2" data-color="blue" data-id="2" role="button" aria-label="Blue Token 3" tabindex="0"></div>
+                                </div>
+                                <div class="token-slot blue-slot" data-index="3" aria-label="Blue Token Slot 4">
+                                    <div class="ludo-token token-blue" id="token-blue-3" data-color="blue" data-id="3" role="button" aria-label="Blue Token 4" tabindex="0"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 🌟 Track cells -->
+                        <div id="board-cells-container"></div>
+
+                        <!-- 🏆 Center winning triangles -->
+                        <div class="center-winning-area" id="center-triangle" aria-label="Center Winning Zone">
+                            <div class="winning-triangle triangle-red"></div>
+                            <div class="winning-triangle triangle-green"></div>
+                            <div class="winning-triangle triangle-yellow"></div>
+                            <div class="winning-triangle triangle-blue"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right-side Player Panels Wrapper -->
+                <div class="side-panels right-panels">
+                    <!-- Yellow Player Panel -->
+                    <article class="player-panel yellow-panel" id="panel-yellow" aria-live="polite" style="position: relative;">
+                        <div class="chat-bubble-popup" id="chat-pop-yellow"></div>
+                        <div class="player-header">
+                            <div class="player-avatar" id="avatar-yellow" aria-hidden="true">🟡</div>
+                            <div class="player-info">
+                                <h3 class="player-name" id="name-yellow">Player 3 (Yellow)</h3>
+                                <span class="player-status" data-i18n="turn_waiting">Waiting...</span>
+                            </div>
+                        </div>
+                        <div class="network-latency-indicator" id="latency-yellow" style="font-size:0.7rem; color:var(--text-muted); margin-bottom: 6px; display: none;">Ping: -- <span style="color:var(--color-muted);">●</span></div>
+                        <div class="player-stats">
+                            <div class="stat-box">
+                                <span class="stat-label" data-i18n="stat_label_1">Home / Board / Win</span>
+                                <span class="stat-value" id="stats-yellow">4 / 0 / 0</span>
+                            </div>
+                            <div class="stat-box">
+                                <span class="stat-label" data-i18n="stat_label_2">Turns / Caps</span>
+                                <span class="stat-value" id="extra-stats-yellow">0 / 0</span>
+                            </div>
+                        </div>
+                    </article>
+
+                    <!-- Blue Player Panel -->
+                    <article class="player-panel blue-panel" id="panel-blue" aria-live="polite" style="position: relative;">
+                        <div class="chat-bubble-popup" id="chat-pop-blue"></div>
+                        <div class="player-header">
+                            <div class="player-avatar" id="avatar-blue" aria-hidden="true">🔵</div>
+                            <div class="player-info">
+                                <h3 class="player-name" id="name-blue">Player 4 (Blue)</h3>
+                                <span class="player-status" data-i18n="turn_waiting">Waiting...</span>
+                            </div>
+                        </div>
+                        <div class="network-latency-indicator" id="latency-blue" style="font-size:0.7rem; color:var(--text-muted); margin-bottom: 6px; display: none;">Ping: -- <span style="color:var(--color-muted);">●</span></div>
+                        <div class="player-stats">
+                            <div class="stat-box">
+                                <span class="stat-label" data-i18n="stat_label_1">Home / Board / Win</span>
+                                <span class="stat-value" id="stats-blue">4 / 0 / 0</span>
+                            </div>
+                            <div class="stat-box">
+                                <span class="stat-label" data-i18n="stat_label_2">Turns / Caps</span>
+                                <span class="stat-value" id="extra-stats-blue">0 / 0</span>
+                            </div>
+                        </div>
+                    </article>
+                </div>
+
+            </div>
+
+            <!-- 📥 Bottom Bar / Game Status bar -->
+            <footer class="bottom-bar">
+                <div class="turn-indicator-box" aria-live="polite">
+                    <span class="active-dot dot-red" id="turn-indicator-dot"></span>
+                    <span class="turn-desc"><span data-i18n="turn_active_desc">Current Turn:</span> <strong id="current-player-turn">Player 1 (Red)</strong></span>
+                </div>
+                
+                <!-- 3D Dice Component Integration -->
+                <div class="dice-bar-container">
+                    <div class="dice-wrapper">
+                        <div id="game-dice" class="dice show-1" role="button" aria-label="Ludo Game Dice" tabindex="0">
+                            <div class="dice-side side-1">
+                                <span class="dot"></span>
+                            </div>
+                            <div class="dice-side side-2">
+                                <span class="dot"></span>
+                                <span class="dot"></span>
+                            </div>
+                            <div class="dice-side side-3">
+                                <span class="dot"></span>
+                                <span class="dot"></span>
+                                <span class="dot"></span>
+                            </div>
+                            <div class="dice-side side-4">
+                                <div class="dot-row">
+                                    <span class="dot"></span>
+                                    <span class="dot"></span>
+                                </div>
+                                <div class="dot-row">
+                                    <span class="dot"></span>
+                                    <span class="dot"></span>
+                                </div>
+                            </div>
+                            <div class="dice-side side-5">
+                                <div class="dot-row">
+                                    <span class="dot"></span>
+                                    <span class="dot"></span>
+                                </div>
+                                <div class="dot-row center-row">
+                                    <span class="dot"></span>
+                                </div>
+                                <div class="dot-row">
+                                    <span class="dot"></span>
+                                    <span class="dot"></span>
+                                </div>
+                            </div>
+                            <div class="dice-side side-6">
+                                <div class="dot-row">
+                                    <span class="dot"></span>
+                                    <span class="dot"></span>
+                                </div>
+                                <div class="dot-row">
+                                    <span class="dot"></span>
+                                    <span class="dot"></span>
+                                </div>
+                                <div class="dot-row">
+                                    <span class="dot"></span>
+                                    <span class="dot"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <button class="btn-premium accent btn-action-roll" id="btn-roll-dice" type="button" aria-label="Roll the 3D Game Dice" data-i18n="roll_dice">Roll Dice</button>
+                </div>
+
+                <div class="game-message-feed" id="game-message-feed" aria-live="polite">
+                    <p class="feed-item fade-in">Welcome to Ludo Champion. Press Roll to move tokens!</p>
+                </div>
+            </footer>
+        </section>
+
+        <!-- ⚙️ Settings Overlay Modal (Phase 13 Expanded with language, themes, and advanced details) -->
+        <div id="settings-overlay" class="overlay-screen" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+            <div class="overlay-content" tabindex="-1" style="max-height:85vh; overflow-y:auto; max-width:480px;">
+                <div class="overlay-header">
+                    <h2 id="settings-title" class="overlay-title" data-i18n="menu_settings">Settings</h2>
+                    <button class="btn-close-overlay" aria-label="Close Settings Panel">&times;</button>
+                </div>
+                <div class="settings-group">
+                    <div class="settings-row">
+                        <span class="settings-label" data-i18n="set_language">Language</span>
+                        <select id="settings-language" class="select-premium" style="width:130px;" aria-label="Language Selector">
+                            <option value="en">English</option>
+                            <option value="ur">اردو</option>
+                            <option value="ar">العربية</option>
+                            <option value="hi">हिन्दी</option>
+                            <option value="es">Español</option>
+                            <option value="fr">Français</option>
+                            <option value="tr">Türkçe</option>
+                            <option value="id">Bahasa</option>
+                        </select>
+                    </div>
+                    <div class="settings-row">
+                        <span class="settings-label" data-i18n="set_theme">Active Theme</span>
+                        <select id="settings-theme" class="select-premium" style="width:130px;" aria-label="Board Theme Selector">
+                            <option value="classic">Classic Blue</option>
+                            <option value="neon">Cyber Neon</option>
+                            <option value="dark">Cosmic Dark</option>
+                            <option value="royal">Royal Gold</option>
+                            <option value="minimal">Minimal Ink</option>
+                        </select>
+                    </div>
+                    <div class="settings-row">
+                        <span class="settings-label" data-i18n="set_high_contrast">High Contrast</span>
+                        <label class="switch">
+                            <input type="checkbox" id="settings-high-contrast" aria-label="High Contrast Selector">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div class="settings-row">
+                        <span class="settings-label" data-i18n="set_reduced_motion">Reduced Motion</span>
+                        <label class="switch">
+                            <input type="checkbox" id="settings-reduced-motion" aria-label="Reduced Motion Selector">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div class="settings-row">
+                        <span class="settings-label">Music Volume</span>
+                        <input type="range" id="settings-music-vol" min="0" max="100" value="50" style="width: 130px; accent-color: var(--color-blue);" aria-label="Music Volume Slider">
+                    </div>
+                    <div class="settings-row">
+                        <span class="settings-label">Effects Volume</span>
+                        <input type="range" id="settings-sfx-vol" min="0" max="100" value="70" style="width: 130px; accent-color: var(--color-blue);" aria-label="Effects Volume Slider">
+                    </div>
+                    <div class="settings-row">
+                        <span class="settings-label">AI Difficulty</span>
+                        <select id="settings-difficulty" class="select-premium" aria-label="AI Difficulty Mode">
+                            <option value="easy">Easy</option>
+                            <option value="medium" selected>Medium</option>
+                            <option value="hard">Hard</option>
+                        </select>
+                    </div>
+                    <div class="settings-row">
+                        <span class="settings-label">Haptic Vibration</span>
+                        <label class="switch">
+                            <input type="checkbox" id="settings-vibration" checked aria-label="Haptic Vibration Switch">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div class="settings-row">
+                        <span class="settings-label">Particle Effects</span>
+                        <label class="switch">
+                            <input type="checkbox" id="settings-particles" checked aria-label="Particle Backdrop Switch">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ℹ️ About Overlay Modal -->
+        <div id="about-overlay" class="overlay-screen" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="about-title">
+            <div class="overlay-content" tabindex="-1">
+                <div class="overlay-header">
+                    <h2 id="about-title" class="overlay-title" data-i18n="menu_about">About</h2>
+                    <button class="btn-close-overlay" aria-label="Close About Panel">&times;</button>
+                </div>
+                <div class="about-details" style="line-height: 1.6; color: var(--text-muted);">
+                    <p style="margin-bottom: 15px; color: var(--text-primary);">
+                        <strong>Ludo Champion</strong> is a high-performance modern web board game.
+                    </p>
+                    <p style="margin-bottom: 15px;">
+                        Roll the dice, strategize, capture opponent tokens, and guide your color home safely.
+                    </p>
+                    <p style="margin-bottom: 15px;">
+                        Built purely on HTML5/CSS3 and native JavaScript. Designed with love and premium dark glassmorphism.
+                    </p>
+                    <p style="font-size: 0.9rem; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 15px;">
+                        Developer: Gemini Antigravity Developer Suite<br>
+                        Version: 1.0.0-release
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 🏆 Victory / Game Over Overlay Modal -->
+        <div id="victory-overlay" class="overlay-screen" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="victory-title">
+            <div class="overlay-content victory-content" tabindex="-1" style="text-align: center;">
+                <div class="victory-header" style="margin-bottom: 25px;">
+                    <span class="victory-crown" style="font-size: 4rem; display: block; filter: drop-shadow(0 0 10px #ffcc00); margin-bottom: 10px;" aria-hidden="true">👑</span>
+                    <h2 id="victory-title" class="overlay-title" style="font-size: 3rem; margin-bottom: 5px;">Victory!</h2>
+                    <p id="winner-name-banner" class="game-subtitle" style="font-size: 1.4rem; color: var(--color-blue); text-shadow: 0 0 8px rgba(0,122,255,0.4); margin-top: 5px;"></p>
+                </div>
+                <div class="victory-stats-grid" style="display: flex; flex-direction: column; gap: 12px; background: rgba(0,0,0,0.3); padding: 20px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.04); margin-bottom: 30px;">
+                    <div class="v-stat-row" style="display: flex; justify-content: space-between; font-size: 1.1rem; border-bottom: 1px solid rgba(255,255,255,0.03); padding-bottom: 6px;">
+                        <span class="v-label" style="color: var(--text-muted);">Turns Played</span>
+                        <span class="v-value" id="v-stat-turns" style="font-weight: 700; color: var(--text-primary);">0</span>
+                    </div>
+                    <div class="v-stat-row" style="display: flex; justify-content: space-between; font-size: 1.1rem; border-bottom: 1px solid rgba(255,255,255,0.03); padding-bottom: 6px;">
+                        <span class="v-label" style="color: var(--text-muted);">Captures Made</span>
+                        <span class="v-value" id="v-stat-captures" style="font-weight: 700; color: var(--text-primary);">0</span>
+                    </div>
+                    <div class="v-stat-row" style="display: flex; justify-content: space-between; font-size: 1.1rem; padding-bottom: 2px;">
+                        <span class="v-label" style="color: var(--text-muted);">Match Duration</span>
+                        <span class="v-value" id="v-stat-duration" style="font-weight: 700; color: var(--text-primary);">0m 0s</span>
+                    </div>
+                </div>
+                <div class="victory-actions" style="display: flex; gap: 15px; width: 100%;">
+                    <button id="btn-victory-restart" class="btn-premium accent" type="button" style="flex: 1; padding: 12px 0; font-size: 1.1rem;" aria-label="Play Another Match">Play Again</button>
+                    <button id="btn-victory-menu" class="btn-premium" type="button" style="flex: 1; padding: 12px 0; font-size: 1.1rem;" aria-label="Return to Main Menu Screen">Main Menu</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 🎮 Game Mode Selection Overlay -->
+        <div id="mode-selection-overlay" class="overlay-screen" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="mode-selection-title">
+            <div class="overlay-content" tabindex="-1" style="max-width: 440px;">
+                <div class="overlay-header">
+                    <h2 id="mode-selection-title" class="overlay-title">Select Mode</h2>
+                    <button class="btn-close-overlay" aria-label="Close Game Mode Selector">&times;</button>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 20px;">
+                    <div class="setup-group">
+                        <label class="settings-label" style="display: block; margin-bottom: 10px;">Select Game Mode</label>
+                        <select id="select-game-mode" class="select-premium" style="width: 100%; padding: 12px; font-size: 1.1rem;" aria-label="Select Game Mode Select">
+                            <option value="single">Single Player (vs AI)</option>
+                            <option value="local">Local Multiplayer (Pass & Play)</option>
+                            <option value="online" selected>Online Multiplayer (Real-time)</option>
+                        </select>
+                    </div>
+                    
+                    <div id="player-count-picker-group" class="setup-group">
+                        <label class="settings-label" style="display: block; margin-bottom: 10px;">Number of Players</label>
+                        <select id="select-player-count" class="select-premium" style="width: 100%; padding: 12px; font-size: 1.1rem;" aria-label="Select Active Player Count">
+                            <option value="2">2 Players (Red, Green)</option>
+                            <option value="3">3 Players (Red, Green, Yellow)</option>
+                            <option value="4" selected>4 Players (Red, Green, Yellow, Blue)</option>
+                        </select>
+                    </div>
+
+                    <button id="btn-proceed-to-names" class="btn-premium accent" type="button" style="width: 100%; margin-top: 10px;" aria-label="Proceed to player configuration profiles">Proceed</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 👥 Player Names Setup Overlay -->
+        <div id="player-setup-overlay" class="overlay-screen" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="player-setup-title">
+            <div class="overlay-content" tabindex="-1" style="max-width: 460px;">
+                <div class="overlay-header">
+                    <h2 id="player-setup-title" class="overlay-title">Configure Players</h2>
+                    <button class="btn-close-overlay" aria-label="Close player profile configuration dialog">&times;</button>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 15px;" id="names-inputs-container">
+                </div>
+                <button id="btn-ready-to-play" class="btn-premium accent" type="button" style="width: 100%; margin-top: 20px;" aria-label="Enter Ludo Arena and Start Playing">Enter Arena</button>
+            </div>
+        </div>
+
+        <!-- 🔒 Pass Device Privacy Screen Overlay -->
+        <div id="pass-device-overlay" class="overlay-screen" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="pass-title" style="background: rgba(5, 5, 8, 0.94); backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px);">
+            <div class="overlay-content" tabindex="-1" style="text-align: center; max-width: 400px; background: rgba(15,15,22,0.8); border-color: rgba(255,255,255,0.12);">
+                <div style="font-size: 3rem; margin-bottom: 15px;" aria-hidden="true">📱</div>
+                <h2 id="pass-title" class="overlay-title" style="font-size: 2rem; margin-bottom: 8px;">Pass the Device</h2>
+                <p id="pass-message-text" style="font-size: 1.1rem; color: var(--text-muted); margin-bottom: 25px;">Please pass the device to Alice</p>
+                <button id="btn-pass-continue" class="btn-premium accent" type="button" style="width: 100%;" aria-label="Confirm passing device and proceed with turn">Continue Turn</button>
+            </div>
+        </div>
+
+        <!-- 💾 Resume Match / Continue Alert Overlay -->
+        <div id="resume-match-overlay" class="overlay-screen" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="resume-title" style="background: rgba(5, 5, 8, 0.92); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);">
+            <div class="overlay-content" tabindex="-1" style="text-align: center; max-width: 420px;">
+                <div style="font-size: 3.5rem; margin-bottom: 15px;" aria-hidden="true">💾</div>
+                <h2 id="resume-title" class="overlay-title" style="font-size: 2rem; margin-bottom: 10px;">Saved Match Found</h2>
+                <p style="font-size: 1.05rem; color: var(--text-muted); margin-bottom: 25px;">You have an unfinished game. Would you like to resume playing?</p>
+                <div style="display: flex; flex-direction: column; gap: 12px; width: 100%;">
+                    <button id="btn-resume-continue" class="btn-premium accent" type="button" aria-label="Continue saved match state">Continue Match</button>
+                    <button id="btn-resume-new" class="btn-premium" type="button" aria-label="Start new game match and wipe save">Start New Match</button>
+                    <button id="btn-resume-delete" class="btn-premium" type="button" style="border-color: rgba(255,59,48,0.2); color: var(--color-red);" aria-label="Delete saved game match profile">Delete Save</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 📈 Statistics & Trophies Dashboard Overlay -->
+        <div id="stats-overlay" class="overlay-screen" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="stats-title-main">
+            <div class="overlay-content" tabindex="-1" style="max-width: 540px; max-height: 85vh; overflow-y: auto; padding: 25px;">
+                <div class="overlay-header" style="margin-bottom: 20px;">
+                    <h2 id="stats-title-main" class="overlay-title">Stats & Trophies</h2>
+                    <button class="btn-close-overlay" aria-label="Close Statistics Dashboard Overlay">&times;</button>
+                </div>
+                
+                <div style="display: flex; flex-direction: column; gap: 20px;">
+                    <!-- Section 1: Player Summary -->
+                    <div style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.04); padding: 15px; border-radius: 12px;">
+                        <h3 style="font-family: var(--font-heading); font-size: 1.2rem; margin-bottom: 10px; color: var(--color-blue);">Global Records</h3>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                            <div class="stat-box" style="align-items: flex-start; padding: 10px;">
+                                <span class="stat-label">Games Played</span>
+                                <span class="stat-value" id="g-stats-played">0</span>
+                            </div>
+                            <div class="stat-box" style="align-items: flex-start; padding: 10px;">
+                                <span class="stat-label">Games Won (Win %)</span>
+                                <span class="stat-value" id="g-stats-won">0 (0%)</span>
+                            </div>
+                            <div class="stat-box" style="align-items: flex-start; padding: 10px;">
+                                <span class="stat-label">Total Captures</span>
+                                <span class="stat-value" id="g-stats-captures">0</span>
+                            </div>
+                            <div class="stat-box" style="align-items: flex-start; padding: 10px;">
+                                <span class="stat-label">Distance Travelled</span>
+                                <span class="stat-value" id="g-stats-distance">0 cells</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Section 2: Achievements List -->
+                    <div>
+                        <h3 style="font-family: var(--font-heading); font-size: 1.2rem; margin-bottom: 10px;">Trophies & Achievements</h3>
+                        <div style="display: flex; flex-direction: column; gap: 8px; max-height: 180px; overflow-y: auto;" id="achievements-scroll-list">
+                        </div>
+                    </div>
+
+                    <!-- Section 3: Data Management buttons -->
+                    <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.03); padding: 15px; border-radius: 12px; display: flex; flex-direction: column; gap: 10px; margin-top: 10px;">
+                        <h4 style="font-size: 0.95rem; color: var(--text-muted);">Backup & Data Utilities</h4>
+                        <div style="display: flex; gap: 10px;">
+                            <button id="btn-export-backup" class="btn-premium" style="font-size: 0.95rem; padding: 10px 0; flex: 1;" type="button" aria-label="Export save profile profile data as clipboard text">Export JSON</button>
+                            <button id="btn-import-backup" class="btn-premium" style="font-size: 0.95rem; padding: 10px 0; flex: 1;" type="button" aria-label="Import save profile profile data text block">Import JSON</button>
+                        </div>
+                        <button id="btn-factory-reset" class="btn-premium" style="font-size: 0.95rem; padding: 10px 0; border-color: rgba(255,59,48,0.2); color: var(--color-red);" type="button" aria-label="Reset all statistics and settings profiles">Factory Reset All Data</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 💬 Online Quick Chat Overlay Panel -->
+        <div id="chat-panel-overlay" class="overlay-screen" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="chat-title">
+            <div class="overlay-content" tabindex="-1" style="max-width: 380px;">
+                <div class="overlay-header">
+                    <h2 id="chat-title" class="overlay-title">Quick Chat</h2>
+                    <button class="btn-close-overlay" aria-label="Close Chat Panel">&times;</button>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                    <div style="font-family: var(--font-heading); font-size: 0.9rem; color: var(--text-muted); text-transform: uppercase;">Emojis</div>
+                    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;" id="chat-emoji-grid">
+                        <button class="btn-premium chat-emoji-btn" type="button" data-emoji="😀">😀</button>
+                        <button class="btn-premium chat-emoji-btn" type="button" data-emoji="🔥">🔥</button>
+                        <button class="btn-premium chat-emoji-btn" type="button" data-emoji="🤣">🤣</button>
+                        <button class="btn-premium chat-emoji-btn" type="button" data-emoji="👑">👑</button>
+                    </div>
+                    <div style="font-family: var(--font-heading); font-size: 0.9rem; color: var(--text-muted); text-transform: uppercase; margin-top: 10px;">Quick Messages</div>
+                    <div style="display: flex; flex-direction: column; gap: 8px;" id="chat-messages-list">
+                        <button class="btn-premium chat-msg-btn" type="button" data-msg="Good game!" style="font-size: 1.1rem; padding: 10px;">Good game!</button>
+                        <button class="btn-premium chat-msg-btn" type="button" data-msg="Oops!" style="font-size: 1.1rem; padding: 10px;">Oops!</button>
+                        <button class="btn-premium chat-msg-btn" type="button" data-msg="Nice move!" style="font-size: 1.1rem; padding: 10px;">Nice move!</button>
+                        <button class="btn-premium chat-msg-btn" type="button" data-msg="Your turn!" style="font-size: 1.1rem; padding: 10px;">Your turn!</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 🌐 Online Lobby / Matchmaking Overlay -->
+        <div id="online-lobby-overlay" class="overlay-screen" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="lobby-title">
+            <div class="overlay-content" tabindex="-1" style="max-width: 450px;">
+                <div class="overlay-header">
+                    <h2 id="lobby-title" class="overlay-title">Online Arena</h2>
+                    <button class="btn-close-overlay" aria-label="Close Lobby Panel">&times;</button>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 15px;">
+                    <!-- Matchmaking Queue Dashboard -->
+                    <div id="lobby-matchmaking-dashboard" style="text-align: center; padding: 20px 0; display: none;">
+                        <div class="dice-spinner" style="margin: 0 auto 20px auto; animation: rotateDice 2s infinite linear;" aria-hidden="true">
+                            <div class="dice-face front"></div>
+                            <div class="dice-face back"></div>
+                        </div>
+                        <h3 style="font-family: var(--font-heading); font-size: 1.4rem; margin-bottom: 5px;">Searching for Opponents...</h3>
+                        <p style="font-size:0.95rem; color: var(--text-muted); margin-bottom: 20px;" id="matchmaking-status-text">Searching... Queue size: 12</p>
+                        <button id="btn-cancel-matchmaking" class="btn-premium" style="width: 100%; border-color: rgba(255,59,48,0.2); color: var(--color-red);" type="button">Cancel Search</button>
+                    </div>
+
+                    <!-- Main Lobby Options -->
+                    <div id="lobby-main-options" style="display: flex; flex-direction: column; gap: 12px;">
+                        <button id="btn-start-matchmaking" class="btn-premium accent" type="button" style="width: 100%;">Quick Match (Auto-Find)</button>
+                        
+                        <div style="text-align: center; font-size: 0.8rem; color: var(--text-muted); margin: 5px 0;">-- OR DIRECT ROOM CONNECTION --</div>
+                        
+                        <div style="background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.04); padding: 15px; border-radius: 12px; display: flex; flex-direction: column; gap: 10px;">
+                            <label class="settings-label">Create Direct P2P Room</label>
+                            <button id="btn-create-lobby-room" class="btn-premium" style="font-size:1.15rem;" type="button">Generate Room Code</button>
+                            <div id="p2p-room-code-box" style="display: none; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.02); padding: 10px; border-radius: 8px; border: 1px dashed rgba(255,255,255,0.1);">
+                                <span style="font-family: monospace; font-size: 1.15rem; font-weight: 700; color: var(--color-yellow);" id="label-generated-room-code">LUDO-8821</span>
+                                <button id="btn-copy-room-code" style="background: none; border: none; color: var(--color-blue); font-weight: 700; cursor: pointer;" type="button">Copy Code</button>
+                            </div>
+                        </div>
+
+                        <div style="background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.04); padding: 15px; border-radius: 12px; display: flex; flex-direction: column; gap: 10px;">
+                            <label class="settings-label" for="input-join-room-code">Join Direct Room</label>
+                            <input type="text" id="input-join-room-code" class="select-premium" placeholder="Enter Room Code (e.g. LUDO-1234)" style="width: 100%; text-align: center; text-transform: uppercase;">
+                            <button id="btn-join-lobby-room" class="btn-premium accent" type="button" style="width: 100%;">Connect to Room</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 👥 Social Hub Overlay Modal -->
+        <div id="friends-overlay" class="overlay-screen" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="friends-title">
+            <div class="overlay-content" tabindex="-1" style="max-width: 450px;">
+                <div class="overlay-header">
+                    <h2 id="friends-title" class="overlay-title">Social Hub</h2>
+                    <button class="btn-close-overlay" aria-label="Close Friends Panel">&times;</button>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 15px;">
+                    <div style="background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.04); padding: 12px; border-radius: 10px; display: flex; gap: 8px;">
+                        <input type="text" id="input-add-friend" class="select-premium" placeholder="Enter friend username" style="flex:1; font-size:1rem;">
+                        <button id="btn-add-friend" class="btn-premium accent" type="button" style="padding: 10px 18px; font-size:1rem;">Add</button>
+                    </div>
+                    <div style="font-family: var(--font-heading); font-size: 0.95rem; color: var(--text-muted); text-transform: uppercase;">Friends List</div>
+                    <div style="display: flex; flex-direction: column; gap: 10px; max-height: 250px; overflow-y: auto;" id="friends-list-container">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 📜 Daily Missions & Events Overlay Modal -->
+        <div id="missions-overlay" class="overlay-screen" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="missions-title-header">
+            <div class="overlay-content" tabindex="-1" style="max-width: 500px; max-height: 80vh; overflow-y: auto;">
+                <div class="overlay-header">
+                    <h2 id="missions-title-header" class="overlay-title">Missions & Events</h2>
+                    <button class="btn-close-overlay" aria-label="Close Missions Panel">&times;</button>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 20px;">
+                    <div>
+                        <div style="font-family: var(--font-heading); font-size: 1.1rem; color: var(--color-yellow); text-transform: uppercase; margin-bottom: 10px;">Daily Quests</div>
+                        <div style="display: flex; flex-direction: column; gap: 10px;" id="daily-missions-container">
+                        </div>
+                    </div>
+                    <div>
+                        <div style="font-family: var(--font-heading); font-size: 1.1rem; color: var(--color-blue); text-transform: uppercase; margin-bottom: 10px;">Weekly Tournament Brackets</div>
+                        <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.04); padding: 15px; border-radius: 12px; font-size: 0.9rem; color: var(--text-muted); line-height: 1.5;">
+                            <div style="display: flex; justify-content: space-between; font-weight: 700; color: var(--text-primary); margin-bottom: 8px;">
+                                <span>🏆 Ludo Grand Cup</span>
+                                <span style="color:var(--color-green);">Registration Open</span>
+                            </div>
+                            <p>Starts: Saturdays at 18:00 UTC</p>
+                            <p style="margin-top: 5px;">Knockout single elimination format. Rewards: 500 Coins + Diamond Badge.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 🛒 Customization Ludo Shop Overlay Modal -->
+        <div id="shop-overlay" class="overlay-screen" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="shop-title-header">
+            <div class="overlay-content" tabindex="-1" style="max-width: 500px; max-height: 80vh; overflow-y: auto;">
+                <div class="overlay-header">
+                    <h2 id="shop-title-header" class="overlay-title">Ludo Shop</h2>
+                    <button class="btn-close-overlay" aria-label="Close Shop Panel">&times;</button>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.3); padding: 12px 18px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.03); margin-bottom: 15px;">
+                    <span style="font-weight:700; color: var(--text-muted);">Your Balance:</span>
+                    <span style="font-weight:800; color: var(--color-yellow); font-size: 1.25rem;" id="shop-coin-balance">🪙 100 Coins</span>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 20px;">
+                    <div>
+                        <div style="font-family: var(--font-heading); font-size: 1.1rem; color: var(--color-blue); text-transform: uppercase; margin-bottom: 10px;">Custom Dice Skins</div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;" id="shop-dice-grid">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 🎟️ Season Pass Overlay Modal (Phase 13 Added Here) -->
+        <div id="season-pass-overlay" class="overlay-screen" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="pass-title-header">
+            <div class="overlay-content" tabindex="-1" style="max-width: 500px; max-height: 80vh; overflow-y: auto;">
+                <div class="overlay-header">
+                    <h2 id="pass-title-header" class="overlay-title" data-i18n="menu_season">Season Pass</h2>
+                    <button class="btn-close-overlay" aria-label="Close Season Pass Panel">&times;</button>
+                </div>
+                <div style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.04); padding: 15px; border-radius: 12px; margin-bottom: 15px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
+                        <span style="font-weight:700;" id="label-pass-tier">Tier 1 Progress</span>
+                        <span style="font-size:0.9rem; color:var(--text-muted);" id="label-pass-xp">0 / 200 SP XP</span>
+                    </div>
+                    <div class="mission-progress-bar">
+                        <div class="mission-progress-fill" id="progress-pass-fill" style="width: 0%;"></div>
+                    </div>
+                </div>
+                <div style="font-family: var(--font-heading); font-size: 1.1rem; text-transform: uppercase; margin-bottom: 10px;">Rewards Roadmap</div>
+                <div style="display: flex; flex-direction: column; gap: 10px;" id="pass-rewards-list">
+                    <!-- Populated in JS -->
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- PWA Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then((reg) => console.log('[PWA] Service Worker registered successfully:', reg.scope))
+                    .catch((err) => console.error('[PWA] Service Worker registration failed:', err));
+            });
+        }
+    </script>
+
+    <!-- Script imports at end of body to guarantee DOM availability -->
+    <script src="js/config.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
