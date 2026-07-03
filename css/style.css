@@ -487,14 +487,40 @@ html, body {
 .board-wrapper {
     width: var(--board-size);
     height: var(--board-size);
-    background: rgba(10, 10, 15, 0.85);
-    border: 6px solid rgba(255, 255, 255, 0.08);
-    border-radius: 20px;
-    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8);
-    padding: 4px;
+    background: rgba(8, 8, 12, 0.95);
+    border: 5px solid rgba(255, 255, 255, 0.1);
+    border-radius: 22px;
+    box-shadow:
+        0 30px 70px rgba(0, 0, 0, 0.9),
+        0 0 0 1px rgba(255,255,255,0.03),
+        inset 0 1px 0 rgba(255,255,255,0.08);
+    padding: 5px;
     display: flex;
     justify-content: center;
     align-items: center;
+    position: relative;
+}
+
+/* Board outer glow rings */
+.board-wrapper::before {
+    content: '';
+    position: absolute;
+    inset: -12px;
+    border-radius: 30px;
+    background: conic-gradient(
+        from 0deg,
+        rgba(255,59,48,0.15), rgba(52,199,89,0.15),
+        rgba(255,204,0,0.15), rgba(0,122,255,0.15),
+        rgba(255,59,48,0.15)
+    );
+    z-index: -1;
+    animation: spinBoardGlow 8s linear infinite;
+    filter: blur(12px);
+}
+
+@keyframes spinBoardGlow {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
 }
 
 #ludo-board {
@@ -504,9 +530,10 @@ html, body {
     width: 100%;
     height: 100%;
     position: relative;
-    background: #0f0f14;
-    border-radius: 12px;
+    background: #0b0b11;
+    border-radius: 16px;
     overflow: hidden;
+    box-shadow: inset 0 0 60px rgba(0,0,0,0.7);
 }
 
 /* Home Area bases */
@@ -514,34 +541,35 @@ html, body {
     display: flex;
     justify-content: center;
     align-items: center;
-    padding: 12%;
+    padding: 10%;
     position: relative;
 }
 
 /* Set precise Grid zones for home bases */
-.green-home-zone { grid-row: 1 / 7; grid-column: 1 / 7; background: radial-gradient(circle, rgba(52,199,89,0.15) 0%, rgba(20,20,30,0.9) 100%); border-right: 2px solid rgba(52,199,89,0.3); border-bottom: 2px solid rgba(52,199,89,0.3); }
-.yellow-home-zone { grid-row: 1 / 7; grid-column: 10 / 16; background: radial-gradient(circle, rgba(255,204,0,0.15) 0%, rgba(20,20,30,0.9) 100%); border-left: 2px solid rgba(255,204,0,0.3); border-bottom: 2px solid rgba(255,204,0,0.3); }
-.red-home-zone { grid-row: 10 / 16; grid-column: 1 / 7; background: radial-gradient(circle, rgba(255,59,48,0.15) 0%, rgba(20,20,30,0.9) 100%); border-right: 2px solid rgba(255,59,48,0.3); border-top: 2px solid rgba(255,59,48,0.3); }
-.blue-home-zone { grid-row: 10 / 16; grid-column: 10 / 16; background: radial-gradient(circle, rgba(0,122,255,0.15) 0%, rgba(20,20,30,0.9) 100%); border-left: 2px solid rgba(0,122,255,0.3); border-top: 2px solid rgba(0,122,255,0.3); }
+.green-home-zone  { grid-row: 1 / 7; grid-column: 1 / 7;   background: linear-gradient(135deg, #0f2e1c 0%, #071410 100%); border-right: 2px solid rgba(52,199,89,0.25); border-bottom: 2px solid rgba(52,199,89,0.25); }
+.yellow-home-zone { grid-row: 1 / 7; grid-column: 10 / 16;  background: linear-gradient(135deg, #2e2510 0%, #141006 100%); border-left: 2px solid rgba(255,204,0,0.25); border-bottom: 2px solid rgba(255,204,0,0.25); }
+.red-home-zone    { grid-row: 10 / 16; grid-column: 1 / 7;  background: linear-gradient(135deg, #2e0f0d 0%, #150706 100%); border-right: 2px solid rgba(255,59,48,0.25); border-top: 2px solid rgba(255,59,48,0.25); }
+.blue-home-zone   { grid-row: 10 / 16; grid-column: 10 / 16; background: linear-gradient(135deg, #0a1f35 0%, #060d19 100%); border-left: 2px solid rgba(0,122,255,0.25); border-top: 2px solid rgba(0,122,255,0.25); }
 
 .home-inner {
     width: 100%;
     height: 100%;
-    border-radius: 14px;
-    background: rgba(0,0,0,0.55);
+    border-radius: 16px;
+    background: rgba(0,0,0,0.6);
     border: 1px solid rgba(255,255,255,0.06);
     display: grid;
     grid-template-columns: 1fr 1fr;
     grid-template-rows: 1fr 1fr;
-    gap: 10%;
-    padding: 10%;
+    gap: 12%;
+    padding: 12%;
+    box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
 }
 
 .token-slot {
     border-radius: 50%;
-    background: rgba(255,255,255,0.04);
-    border: 2px dashed rgba(255,255,255,0.12);
-    box-shadow: inset 0 0 8px rgba(0,0,0,0.7);
+    background: rgba(255,255,255,0.03);
+    border: 2px dashed rgba(255,255,255,0.1);
+    box-shadow: inset 0 0 10px rgba(0,0,0,0.8);
     position: relative;
     display: flex;
     justify-content: center;
@@ -549,10 +577,10 @@ html, body {
 }
 
 /* Colored slots glow */
-.green-slot { border-color: rgba(52, 199, 89, 0.4); }
-.yellow-slot { border-color: rgba(255, 204, 0, 0.4); }
-.red-slot { border-color: rgba(255, 59, 48, 0.4); }
-.blue-slot { border-color: rgba(0, 122, 255, 0.4); }
+.green-slot  { border-color: rgba(52, 199, 89, 0.5); box-shadow: inset 0 0 8px rgba(52,199,89,0.15); }
+.yellow-slot { border-color: rgba(255, 204, 0, 0.5); box-shadow: inset 0 0 8px rgba(255,204,0,0.15); }
+.red-slot    { border-color: rgba(255, 59, 48, 0.5); box-shadow: inset 0 0 8px rgba(255,59,48,0.15); }
+.blue-slot   { border-color: rgba(0, 122, 255, 0.5); box-shadow: inset 0 0 8px rgba(0,122,255,0.15); }
 
 /* Track cells and container styling */
 #board-cells-container {
@@ -560,38 +588,45 @@ html, body {
 }
 
 .board-cell {
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255,255,255,0.04);
     display: flex;
     justify-content: center;
     align-items: center;
     position: relative;
-    background: rgba(20, 20, 30, 0.6);
-    box-shadow: inset 0 0 5px rgba(0,0,0,0.5);
-    transition: background 0.2s, box-shadow 0.2s;
+    background: #121218;
+    transition: background 0.2s;
+    overflow: visible;
+    isolation: isolate;
+}
+
+.board-cell:nth-child(odd) {
+    background: #131319;
 }
 
 /* Home Path Colors */
-.cell-red-path { background: linear-gradient(135deg, rgba(255, 59, 48, 0.15) 0%, rgba(255, 59, 48, 0.05) 100%); border: 1px solid rgba(255, 59, 48, 0.3) !important; }
-.cell-green-path { background: linear-gradient(135deg, rgba(52, 199, 89, 0.15) 0%, rgba(52, 199, 89, 0.05) 100%); border: 1px solid rgba(52, 199, 89, 0.3) !important; }
-.cell-yellow-path { background: linear-gradient(135deg, rgba(255, 204, 0, 0.15) 0%, rgba(255, 204, 0, 0.05) 100%); border: 1px solid rgba(255, 204, 0, 0.3) !important; }
-.cell-blue-path { background: linear-gradient(135deg, rgba(0, 122, 255, 0.15) 0%, rgba(0, 122, 255, 0.05) 100%); border: 1px solid rgba(0, 122, 255, 0.3) !important; }
+.cell-red-path    { background: linear-gradient(135deg, #3a1210 0%, #1a0807 100%) !important; border-color: rgba(255,59,48,0.15); }
+.cell-green-path  { background: linear-gradient(135deg, #102a1c 0%, #06140d 100%) !important; border-color: rgba(52,199,89,0.15); }
+.cell-yellow-path { background: linear-gradient(135deg, #312208 0%, #180f03 100%) !important; border-color: rgba(255,204,0,0.15); }
+.cell-blue-path   { background: linear-gradient(135deg, #0a1e35 0%, #050f1a 100%) !important; border-color: rgba(0,122,255,0.15); }
 
 /* Start and Safe cells highlights */
-.cell-red-start { background: linear-gradient(135deg, var(--color-red) 0%, #8a1f1a 100%) !important; box-shadow: inset 0 0 10px rgba(255,255,255,0.2); }
-.cell-green-start { background: linear-gradient(135deg, var(--color-green) 0%, #1f6b31 100%) !important; box-shadow: inset 0 0 10px rgba(255,255,255,0.2); }
-.cell-yellow-start { background: linear-gradient(135deg, var(--color-yellow) 0%, #b38f00 100%) !important; box-shadow: inset 0 0 10px rgba(0,0,0,0.2); }
-.cell-blue-start { background: linear-gradient(135deg, var(--color-blue) 0%, #0059b3 100%) !important; box-shadow: inset 0 0 10px rgba(255,255,255,0.2); }
+.cell-red-start    { background: linear-gradient(135deg, #ff3b30 0%, #8a1f1a 100%) !important; box-shadow: inset 0 0 14px rgba(255,255,255,0.25), 0 0 10px rgba(255,59,48,0.4); border-color: rgba(255,59,48,0.6) !important; }
+.cell-green-start  { background: linear-gradient(135deg, #34c759 0%, #1f6b31 100%) !important; box-shadow: inset 0 0 14px rgba(255,255,255,0.25), 0 0 10px rgba(52,199,89,0.4); border-color: rgba(52,199,89,0.6) !important; }
+.cell-yellow-start { background: linear-gradient(135deg, #ffcc00 0%, #b38f00 100%) !important; box-shadow: inset 0 0 14px rgba(255,255,255,0.3), 0 0 10px rgba(255,204,0,0.4); border-color: rgba(255,204,0,0.6) !important; }
+.cell-blue-start   { background: linear-gradient(135deg, #007aff 0%, #0059b3 100%) !important; box-shadow: inset 0 0 14px rgba(255,255,255,0.25), 0 0 10px rgba(0,122,255,0.4); border-color: rgba(0,122,255,0.6) !important; }
 
 /* Star Indicators for Safe Cells */
 .cell-safe {
-    background: #1c1c24;
+    background: #18181f !important;
+    box-shadow: inset 0 0 6px rgba(255,255,255,0.06);
 }
 
 .cell-safe::after {
     content: '⭐';
-    font-size: 0.9rem;
-    filter: drop-shadow(0 0 3px rgba(255, 255, 255, 0.4));
-    opacity: 0.75;
+    font-size: 0.85rem;
+    filter: drop-shadow(0 0 4px rgba(255, 200, 0, 0.6));
+    opacity: 0.85;
+    pointer-events: none;
 }
 
 .cell-red-start::after,
@@ -599,8 +634,10 @@ html, body {
 .cell-yellow-start::after,
 .cell-blue-start::after {
     content: '🚀';
-    font-size: 0.95rem;
-    opacity: 0.9;
+    font-size: 0.9rem;
+    opacity: 1;
+    pointer-events: none;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.8));
 }
 
 /* 🧱 Phase 5: Blockades Highlight */
@@ -620,8 +657,10 @@ html, body {
     grid-row: 7 / 10;
     grid-column: 7 / 10;
     position: relative;
-    background: #111116;
-    border: 1px solid var(--cell-border);
+    background: #0d0d12;
+    border: 1px solid rgba(255,255,255,0.05);
+    box-shadow: inset 0 0 20px rgba(0,0,0,0.6);
+    overflow: visible;
 }
 
 .winning-triangle {
@@ -636,32 +675,32 @@ html, body {
     top: 0;
     left: 0;
     border-width: 55px 0 55px 55px;
-    border-color: transparent transparent transparent rgba(255, 59, 48, 0.75);
-    filter: drop-shadow(2px 0 5px rgba(255, 59, 48, 0.3));
+    border-color: transparent transparent transparent rgba(255, 59, 48, 0.9);
+    filter: drop-shadow(3px 0 6px rgba(255, 59, 48, 0.5));
 }
 
 .triangle-green {
     top: 0;
     left: 0;
     border-width: 55px 55px 0 55px;
-    border-color: rgba(52, 199, 89, 0.75) transparent transparent transparent;
-    filter: drop-shadow(0 2px 5px rgba(52, 199, 89, 0.3));
+    border-color: rgba(52, 199, 89, 0.9) transparent transparent transparent;
+    filter: drop-shadow(0 3px 6px rgba(52, 199, 89, 0.5));
 }
 
 .triangle-yellow {
     top: 0;
     right: 0;
     border-width: 55px 55px 55px 0;
-    border-color: transparent rgba(255, 204, 0, 0.75) transparent transparent;
-    filter: drop-shadow(-2px 0 5px rgba(255, 204, 0, 0.3));
+    border-color: transparent rgba(255, 204, 0, 0.9) transparent transparent;
+    filter: drop-shadow(-3px 0 6px rgba(255, 204, 0, 0.5));
 }
 
 .triangle-blue {
     bottom: 0;
     left: 0;
     border-width: 0 55px 55px 55px;
-    border-color: transparent transparent rgba(0, 122, 255, 0.75) transparent;
-    filter: drop-shadow(0 -2px 5px rgba(0, 122, 255, 0.3));
+    border-color: transparent transparent rgba(0, 122, 255, 0.9) transparent;
+    filter: drop-shadow(0 -3px 6px rgba(0, 122, 255, 0.5));
 }
 
 /* 📥 Bottom Bar Component styles */
@@ -791,57 +830,89 @@ html, body {
     animation: spinDice 0.6s ease-in-out;
 }
 
-/* 🪙 Token Visual design rules */
+/* 🪙 Token Visual design rules — 3D sphere look */
 .ludo-token {
     width: 75%;
     height: 75%;
     border-radius: 50%;
-    border: 2px solid rgba(255, 255, 255, 0.4);
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.6), inset 0 2px 4px rgba(255,255,255,0.4);
+    border: 2px solid rgba(255, 255, 255, 0.5);
+    box-shadow:
+        0 6px 14px rgba(0, 0, 0, 0.7),
+        inset 0 -4px 8px rgba(0, 0, 0, 0.4),
+        inset 0 3px 6px rgba(255, 255, 255, 0.5);
     cursor: default;
     z-index: 50;
-    transition: transform 0.25s cubic-bezier(0.25, 0.8, 0.25, 1), box-shadow 0.2s, z-index 0.1s;
+    transition: transform 0.25s cubic-bezier(0.25, 0.8, 0.25, 1), box-shadow 0.2s;
     position: relative;
-    pointer-events: none;
+    pointer-events: auto;
     animation: floatToken 3s ease-in-out infinite;
+    transform-style: preserve-3d;
 }
 
-/* Color Tokens styling gradients with premium 3D look */
+/* 3D gloss highlight via pseudo-element */
+.ludo-token::before {
+    content: '';
+    position: absolute;
+    top: 10%;
+    left: 18%;
+    width: 35%;
+    height: 30%;
+    background: radial-gradient(circle, rgba(255,255,255,0.75) 0%, transparent 80%);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 1;
+}
+
+/* Color Tokens styling gradients */
 .token-red {
-    background: radial-gradient(circle at 30% 30%, #ff8882 0%, #ff3b30 40%, #a6120d 85%, #600000 100%);
-    box-shadow: 0 6px 12px rgba(255, 59, 48, 0.4), inset 0 2px 4px rgba(255,255,255,0.6), inset 0 -3px 8px rgba(0,0,0,0.4);
+    background: radial-gradient(circle at 35% 35%, #ff7a72 0%, #e0221e 60%, #8c0d0a 100%);
+    box-shadow: 0 6px 14px rgba(255, 59, 48, 0.5), inset 0 -3px 6px rgba(0,0,0,0.4), inset 0 3px 6px rgba(255,150,140,0.5);
 }
 
 .token-green {
-    background: radial-gradient(circle at 30% 30%, #8ef5a5 0%, #34c759 40%, #1a7830 85%, #083c12 100%);
-    box-shadow: 0 6px 12px rgba(52, 199, 89, 0.4), inset 0 2px 4px rgba(255,255,255,0.6), inset 0 -3px 8px rgba(0,0,0,0.4);
+    background: radial-gradient(circle at 35% 35%, #78f09a 0%, #2aa348 60%, #155725 100%);
+    box-shadow: 0 6px 14px rgba(52, 199, 89, 0.5), inset 0 -3px 6px rgba(0,0,0,0.4), inset 0 3px 6px rgba(120,240,154,0.5);
 }
 
 .token-yellow {
-    background: radial-gradient(circle at 30% 30%, #fff2a3 0%, #ffcc00 40%, #b38f00 85%, #665200 100%);
-    box-shadow: 0 6px 12px rgba(255, 204, 0, 0.4), inset 0 2px 4px rgba(255,255,255,0.6), inset 0 -3px 8px rgba(0,0,0,0.4);
+    background: radial-gradient(circle at 35% 35%, #ffef80 0%, #d4a800 60%, #806600 100%);
+    box-shadow: 0 6px 14px rgba(255, 204, 0, 0.5), inset 0 -3px 6px rgba(0,0,0,0.4), inset 0 3px 6px rgba(255,240,120,0.5);
 }
 
 .token-blue {
-    background: radial-gradient(circle at 30% 30%, #80c2ff 0%, #007aff 40%, #004d99 85%, #002244 100%);
-    box-shadow: 0 6px 12px rgba(0, 122, 255, 0.4), inset 0 2px 4px rgba(255,255,255,0.6), inset 0 -3px 8px rgba(0,0,0,0.4);
+    background: radial-gradient(circle at 35% 35%, #6dbeff 0%, #0068cc 60%, #00366c 100%);
+    box-shadow: 0 6px 14px rgba(0, 122, 255, 0.5), inset 0 -3px 6px rgba(0,0,0,0.4), inset 0 3px 6px rgba(100,180,255,0.5);
 }
 
 /* Glowing selection highlights for movable tokens */
 .ludo-token.selectable {
     cursor: pointer;
     pointer-events: auto;
-    animation: pulseSelection 1.2s infinite ease-in-out;
-    z-index: 100;
+    animation: pulseSelection 0.9s infinite ease-in-out;
+    z-index: 200;
 }
 
-.ludo-token.selectable.token-red { box-shadow: 0 0 15px var(--color-red), inset 0 2px 4px rgba(255,255,255,0.4); border-color: rgba(255,255,255,0.8); }
-.ludo-token.selectable.token-green { box-shadow: 0 0 15px var(--color-green), inset 0 2px 4px rgba(255,255,255,0.4); border-color: rgba(255,255,255,0.8); }
-.ludo-token.selectable.token-yellow { box-shadow: 0 0 15px var(--color-yellow), inset 0 2px 4px rgba(255,255,255,0.4); border-color: rgba(255,255,255,0.8); }
-.ludo-token.selectable.token-blue { box-shadow: 0 0 15px var(--color-blue), inset 0 2px 4px rgba(255,255,255,0.4); border-color: rgba(255,255,255,0.8); }
+.ludo-token.selectable.token-red    { box-shadow: 0 0 20px 4px var(--color-red), inset 0 3px 6px rgba(255,150,140,0.5);    border-color: #fff; }
+.ludo-token.selectable.token-green  { box-shadow: 0 0 20px 4px var(--color-green), inset 0 3px 6px rgba(120,240,154,0.5);  border-color: #fff; }
+.ludo-token.selectable.token-yellow { box-shadow: 0 0 20px 4px var(--color-yellow), inset 0 3px 6px rgba(255,240,120,0.5); border-color: #fff; }
+.ludo-token.selectable.token-blue   { box-shadow: 0 0 20px 4px var(--color-blue), inset 0 3px 6px rgba(100,180,255,0.5);   border-color: #fff; }
 
-.ludo-token:active {
-    transform: scale(0.9);
+/* Finished token — stays on board with gold aura */
+.ludo-token.token-finished {
+    animation: tokenWinPulse 2s ease-in-out infinite;
+    border-color: gold !important;
+    z-index: 300;
+    cursor: default;
+    pointer-events: none;
+}
+
+@keyframes tokenWinPulse {
+    0%, 100% { box-shadow: 0 0 12px 3px gold, inset 0 3px 6px rgba(255,255,200,0.5); transform: scale(1); }
+    50%       { box-shadow: 0 0 24px 8px gold, inset 0 3px 6px rgba(255,255,200,0.5); transform: scale(1.15); }
+}
+
+.ludo-token:active:not(.selectable) {
+    transform: scale(0.92);
 }
 
 /* Board position layout adjustments */
@@ -849,6 +920,10 @@ html, body {
     position: absolute;
     width: var(--token-size);
     height: var(--token-size);
+    place-self: center;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
 }
 
 /* Toast Popups Alert Center */
@@ -1160,37 +1235,35 @@ body.reduced-motion * {
     pointer-events: none;
 }
 
-/* Stack counts notification bubble */
-.cell-token-badge {
+/* 🔢 Cluster Count Badge – appears on cells with 2+ tokens */
+.cluster-badge {
     position: absolute;
-    top: -2px;
-    right: -2px;
-    width: 17px;
-    height: 17px;
-    border-radius: 50%;
-    border: 1px solid #ffffff;
-    font-size: 0.72rem;
-    font-weight: 900;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.5);
-    z-index: 101; /* Above token selectables */
+    top: 1px;
+    right: 1px;
+    background: rgba(0, 0, 0, 0.82);
+    color: #fff;
+    font-family: var(--font-heading);
+    font-size: 0.58rem;
+    font-weight: 700;
+    padding: 1px 4px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    z-index: 400;
     pointer-events: none;
-    animation: badgePop 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    letter-spacing: 0.5px;
+    line-height: 1.3;
+    backdrop-filter: blur(4px);
 }
 
-.badge-red { background: var(--color-red); color: #fff; }
-.badge-green { background: var(--color-green); color: #fff; }
-.badge-blue { background: var(--color-blue); color: #fff; }
-.badge-yellow { background: var(--color-yellow); color: #000; }
-
-@keyframes badgePop {
-    0% { transform: scale(0); opacity: 0; }
-    100% { transform: scale(1); opacity: 1; }
+/* Same-color double-stack blockade shows a yellow warning badge */
+.cell-blockade .cluster-badge {
+    background: rgba(180, 130, 0, 0.9);
+    border-color: rgba(255, 204, 0, 0.6);
+    color: #fff;
 }
 
-
-
-
+/* Token position helper — board tokens need explicit grid placement */
+#ludo-board > .ludo-token {
+    position: absolute;
+}
 

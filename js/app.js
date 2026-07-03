@@ -67,18 +67,32 @@ class LudoAudioEngine {
             osc.stop(now + 0.19);
         }
         else if (type === 'capture') {
-            osc.type = 'triangle';
-            osc.frequency.setValueAtTime(440, now);
-            // Cartoon "boing" vibrato slide down
-            for (let i = 0; i < 30; i++) {
-                const t = now + (i * 0.015);
-                const freq = Math.max(80, 440 - (i * 12) + Math.sin(i * 1.5) * 45);
-                osc.frequency.setValueAtTime(freq, t);
-            }
-            gain.gain.setValueAtTime(this.sfxVolume * 0.35, now);
-            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.45);
-            osc.start(now);
-            osc.stop(now + 0.46);
+            // Funny boing/squeak sound on capture
+            const boingOsc = this.ctx.createOscillator();
+            const boingGain = this.ctx.createGain();
+            boingOsc.connect(boingGain);
+            boingGain.connect(this.ctx.destination);
+            boingOsc.type = 'sine';
+            boingOsc.frequency.setValueAtTime(120, now);
+            boingOsc.frequency.exponentialRampToValueAtTime(800, now + 0.08);
+            boingOsc.frequency.exponentialRampToValueAtTime(200, now + 0.25);
+            boingGain.gain.setValueAtTime(this.sfxVolume * 0.4, now);
+            boingGain.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
+            boingOsc.start(now);
+            boingOsc.stop(now + 0.36);
+
+            // Extra comic squeak
+            const squeakOsc = this.ctx.createOscillator();
+            const squeakGain = this.ctx.createGain();
+            squeakOsc.connect(squeakGain);
+            squeakGain.connect(this.ctx.destination);
+            squeakOsc.type = 'sawtooth';
+            squeakOsc.frequency.setValueAtTime(1200, now + 0.15);
+            squeakOsc.frequency.exponentialRampToValueAtTime(300, now + 0.4);
+            squeakGain.gain.setValueAtTime(this.sfxVolume * 0.15, now + 0.15);
+            squeakGain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+            squeakOsc.start(now + 0.15);
+            squeakOsc.stop(now + 0.41);
         }
         else if (type === 'notification') {
             osc.type = 'sine';
@@ -88,6 +102,23 @@ class LudoAudioEngine {
             gain.gain.exponentialRampToValueAtTime(0.01, now + 0.24);
             osc.start(now);
             osc.stop(now + 0.25);
+        }
+        else if (type === 'finished') {
+            // Fanfare for token reaching home
+            const fanfareNotes = [523.25, 659.25, 783.99, 1046.5];
+            fanfareNotes.forEach((freq, idx) => {
+                const noteTime = now + (idx * 0.09);
+                const noteOsc = this.ctx.createOscillator();
+                const noteGain = this.ctx.createGain();
+                noteOsc.connect(noteGain);
+                noteGain.connect(this.ctx.destination);
+                noteOsc.type = 'sine';
+                noteOsc.frequency.setValueAtTime(freq, noteTime);
+                noteGain.gain.setValueAtTime(this.sfxVolume * 0.22, noteTime);
+                noteGain.gain.exponentialRampToValueAtTime(0.01, noteTime + 0.28);
+                noteOsc.start(noteTime);
+                noteOsc.stop(noteTime + 0.3);
+            });
         }
         else if (type === 'victory') {
             const notes = [261.63, 329.63, 392.00, 523.25];
@@ -385,7 +416,12 @@ class LudoGameApp {
                 this.playAudio('click');
                 this.closeOverlay('victory-overlay');
                 this.resetGame();
-                this.startGame();
+                if (this.gameMode === 'online' && this.hostColor) {
+                    this.startGame(this.hostColor);
+                } else {
+                    const firstActive = this.playersOrder.find(c => !this.inactivePlayers[c]) || 'red';
+                    this.startGame(firstActive);
+                }
             });
         }
 
@@ -1094,13 +1130,14 @@ class LudoGameApp {
     syncPlayerNamesToPanels() {
         this.playersOrder.forEach(color => {
             const nameEl = document.getElementById(`name-${color}`);
-            if (nameEl) {
+            const panelEl = document.getElementById(`panel-${color}`);
+            if (nameEl && panelEl) {
                 if (this.inactivePlayers[color]) {
                     nameEl.textContent = 'Disabled';
-                    nameEl.parentElement.parentElement.style.display = 'none';
+                    panelEl.style.display = 'none';
                 } else {
                     nameEl.textContent = this.playerNames[color] + (this.isBotColor[color] && this.gameMode === 'single' ? ' [Bot]' : '');
-                    nameEl.parentElement.parentElement.style.display = 'block';
+                    panelEl.style.display = 'block';
                 }
             }
         });
@@ -1118,25 +1155,29 @@ class LudoGameApp {
         }
     }
 
-    startGame(startColor = 'red') {
+    startGame(startColor = null) {
         this.matchStartTime = Date.now();
         
         this.playersOrder.forEach(color => {
             this.tokens[color].forEach(token => {
                 token.position = -1;
                 token.isFinished = false;
-                if (token.element) {
-                    token.element.style.display = '';
-                    token.element.style.transform = '';
-                    token.element.style.zIndex = '';
-                }
                 this.moveTokenToHomeSlot(token);
             });
             this.stats[color] = { turnsPlayed: 0, capturesMade: 0, timesCaptured: 0, distanceTravelled: 0 };
             this.updateStatsUI(color);
         });
 
-        this.currentPlayerIdx = this.playersOrder.indexOf(startColor);
+        let initialColor = startColor;
+        if (!initialColor) {
+            if (this.gameMode === 'online' && this.hostColor) {
+                initialColor = this.hostColor;
+            } else {
+                initialColor = this.playersOrder.find(c => !this.inactivePlayers[c]) || 'red';
+            }
+        }
+
+        this.currentPlayerIdx = this.playersOrder.indexOf(initialColor);
         if (this.currentPlayerIdx === -1) this.currentPlayerIdx = 0;
 
         // Skip any starting inactive player
@@ -1666,12 +1707,24 @@ class LudoGameApp {
                     isFinished: false,
                     element: el
                 };
-                
-                if (el) {
-                    el.addEventListener('click', () => this.handleTokenClick(tokenState));
-                }
-
                 this.tokens[color].push(tokenState);
+            }
+        });
+
+        // Use event delegation on the full viewport so clicks reach tokens
+        // regardless of whether they sit inside home slots or on the board
+        const viewport = document.getElementById('main-play-viewport') || document.getElementById('game-play-screen') || document.body;
+        viewport.addEventListener('click', (e) => {
+            const el = e.target.closest('.ludo-token');
+            if (!el) return;
+            // Find the token state object for this element
+            for (const color of this.playersOrder) {
+                for (const token of this.tokens[color]) {
+                    if (token.element === el) {
+                        this.handleTokenClick(token);
+                        return;
+                    }
+                }
             }
         });
     }
@@ -2026,7 +2079,14 @@ class LudoGameApp {
     }
 
     isPathBlockedByBlockade(token, startPos, steps) {
-        return false;
+        const color = token.color;
+        // Only block at the FINAL destination by opponent double-stacks (true blockade)
+        // Intermediate cells are NOT blocking — tokens can hop over them
+        const endPos = startPos + steps;
+        if (endPos > 56) return false;
+        const endCoords = this.playerPaths[color][endPos];
+        if (!endCoords) return false;
+        return this.hasOpponentBlockadeAt(color, endCoords);
     }
 
     hasOpponentBlockadeAt(myColor, coords) {
@@ -2048,6 +2108,9 @@ class LudoGameApp {
         movableList.forEach(token => {
             if (token.element) {
                 token.element.classList.add('selectable');
+                token.element.style.pointerEvents = 'auto';
+                token.element.style.cursor = 'pointer';
+                token.element.style.zIndex = '200';
             }
         });
     }
@@ -2055,8 +2118,11 @@ class LudoGameApp {
     clearSelectableHighlights() {
         this.playersOrder.forEach(color => {
             this.tokens[color].forEach(token => {
-                if (token.element) {
+                if (token.element && !token.isFinished) {
                     token.element.classList.remove('selectable');
+                    token.element.style.pointerEvents = 'auto';
+                    token.element.style.cursor = 'default';
+                    token.element.style.zIndex = '';
                 }
             });
         });
@@ -2146,28 +2212,34 @@ class LudoGameApp {
             if (capturedList.length > 0) {
                 this.playAudio('capture');
                 this.triggerVibration(250);
-                this.showToastNotification('Token Captured!', color);
+                this.showToastNotification('💥 Token Captured!', color);
                 this.logFeedMessage(`${this.playerNames[color]} captured opponent token!`);
                 
-                // Only capture ONE token, others remain safe on the slot!
-                const cToken = capturedList[0];
-                cToken.position = -1;
-                this.stats[cToken.color].timesCaptured++;
-                this.updateStatsUI(cToken.color);
-                this.moveTokenToHomeSlot(cToken);
+                // Only capture ONE token from each color group (if 2 same-color on cell, only 1 removed)
+                const capturedByColor = {};
+                capturedList.forEach(cToken => {
+                    if (!capturedByColor[cToken.color]) {
+                        capturedByColor[cToken.color] = cToken;
+                    }
+                });
+
+                Object.values(capturedByColor).forEach(cToken => {
+                    cToken.position = -1;
+                    this.stats[cToken.color].timesCaptured++;
+                    this.updateStatsUI(cToken.color);
+                    this.moveTokenToHomeSlot(cToken);
+                });
 
                 this.stats[color].capturesMade++;
                 this.updateStatsUI(color);
 
-                if (color === 'red') {
-                    this.addXP(10);
-                    this.unlockAchievement('first-blood');
+                this.addXP(10);
+                this.unlockAchievement('first-blood');
                     
-                    const m = this.dailyMissions.find(x => x.id === 'capture-token');
-                    if (m && m.current < m.target) {
-                        m.current++;
-                        this.saveGlobalStatistics();
-                    }
+                const m = this.dailyMissions.find(x => x.id === 'capture-token');
+                if (m && m.current < m.target) {
+                    m.current++;
+                    this.saveGlobalStatistics();
                 }
 
                 this.globalStats.totalCaptures++;
@@ -2176,24 +2248,30 @@ class LudoGameApp {
                 this.extraTurnAwarded = true;
             }
         } else {
-            this.showToastNotification('Safe Cell', color);
+            if (finalCoords) {
+                const isStartCell = Object.values({ red: { r: 8, c: 2 }, green: { r: 2, c: 8 }, yellow: { r: 8, c: 14 }, blue: { r: 14, c: 8 } })
+                    .some(sc => sc.r === finalCoords.r && sc.c === finalCoords.c);
+                if (isStartCell) {
+                    this.showToastNotification('🚀 Safe Start!', color);
+                } else {
+                    this.showToastNotification('⭐ Safe Cell!', color);
+                }
+            }
             this.triggerVibration(40);
         }
 
         if (token.position === 56) {
             token.isFinished = true;
-            this.playAudio('notification');
+            this.playAudio('finished');
             this.triggerVibration(100);
-            this.showToastNotification(`Token Finished!`, color);
+            this.showToastNotification(`🏆 Token Home!`, color);
             this.logFeedMessage(`${this.playerNames[color]}'s token reached center!`);
             
+            // Keep token VISIBLE on the center winning area with a finished glow
             if (token.element) {
-                const finishedOffsets = [
-                    {x: -6, y: -6}, {x: 6, y: -6}, {x: -6, y: 6}, {x: 6, y: 6}
-                ];
-                const offsetIdx = token.id % 4;
-                token.element.style.transform = `scale(0.6) translate(${finishedOffsets[offsetIdx].x}px, ${finishedOffsets[offsetIdx].y}px)`;
-                token.element.style.zIndex = "5";
+                token.element.classList.add('token-finished');
+                token.element.style.pointerEvents = 'none';
+                token.element.style.cursor = 'default';
             }
         }
 
@@ -2224,6 +2302,16 @@ class LudoGameApp {
 
     checkOpponentsToCapture(myColor, coords) {
         const toCapture = [];
+        // Starting cells are permanently safe – never capture on them
+        const startCells = [
+            { r: 8, c: 2 },   // red start
+            { r: 2, c: 8 },   // green start
+            { r: 8, c: 14 },  // yellow start
+            { r: 14, c: 8 }   // blue start
+        ];
+        const isStartCell = startCells.some(sc => sc.r === coords.r && sc.c === coords.c);
+        if (isStartCell) return toCapture;
+
         this.playersOrder.forEach(color => {
             if (color === myColor || this.inactivePlayers[color]) return;
             this.tokens[color].forEach(token => {
@@ -2239,12 +2327,28 @@ class LudoGameApp {
 
     positionTokenOnBoard(token, coords) {
         if (!token.element) return;
-        const board = document.getElementById('ludo-board');
-        if (token.element.parentElement !== board) {
-            board.appendChild(token.element);
+        const cellId = `cell-${coords.r}-${coords.c}`;
+        const targetCell = document.getElementById(cellId);
+        if (targetCell) {
+            if (token.element.parentElement !== targetCell) {
+                targetCell.appendChild(token.element);
+            }
+            // Reset inline grid positioning (used by old approach)
+            token.element.style.gridRow = '';
+            token.element.style.gridColumn = '';
+            token.element.style.position = 'absolute';
+            token.element.style.top = '50%';
+            token.element.style.left = '50%';
+            token.element.style.transform = 'translate(-50%,-50%)';
+        } else {
+            // Fallback: place directly on board grid
+            const board = document.getElementById('ludo-board');
+            if (board && token.element.parentElement !== board) {
+                board.appendChild(token.element);
+            }
+            token.element.style.gridRow = coords.r;
+            token.element.style.gridColumn = coords.c;
         }
-        token.element.style.gridRow = coords.r;
-        token.element.style.gridColumn = coords.c;
     }
 
     moveTokenToHomeSlot(token) {
@@ -2252,10 +2356,15 @@ class LudoGameApp {
         const slot = document.querySelector(`.home-area.${token.color}-home-zone .token-slot[data-index="${token.id}"]`);
         if (slot) {
             slot.appendChild(token.element);
+            // Reset any board-specific inline styles
             token.element.style.gridRow = '';
             token.element.style.gridColumn = '';
+            token.element.style.position = '';
+            token.element.style.top = '';
+            token.element.style.left = '';
             token.element.style.transform = '';
             token.element.style.display = 'flex';
+            token.element.classList.remove('token-finished');
         }
     }
 
@@ -2273,13 +2382,11 @@ class LudoGameApp {
             });
         });
 
-        // Clear existing blockade classes and numeric badges on cells
+        // Clear previous blockade markers and cluster badges
         document.querySelectorAll('.board-cell.cell-blockade').forEach(el => {
             el.classList.remove('cell-blockade');
         });
-        document.querySelectorAll('.cell-token-badge').forEach(el => {
-            el.remove();
-        });
+        document.querySelectorAll('.cluster-badge').forEach(el => el.remove());
 
         Object.keys(clusters).forEach(key => {
             const list = clusters[key];
@@ -2287,23 +2394,20 @@ class LudoGameApp {
             const [r, c] = key.split('_').map(Number);
             const cellEl = document.getElementById(`cell-${r}-${c}`);
 
-            // Count tokens by color on this cell
-            const colorCounts = {};
-            list.forEach(t => {
-                colorCounts[t.color] = (colorCounts[t.color] || 0) + 1;
-            });
+            if (len >= 2) {
+                const firstColor = list[0].color;
+                const isBlockade = list.every(t => t.color === firstColor);
+                if (isBlockade && cellEl) {
+                    cellEl.classList.add('cell-blockade');
+                }
 
-            if (cellEl) {
-                // Show badge for each color that has count > 1
-                Object.keys(colorCounts).forEach(color => {
-                    const count = colorCounts[color];
-                    if (count > 1) {
-                        const badge = document.createElement('span');
-                        badge.className = `cell-token-badge badge-${color}`;
-                        badge.textContent = count;
-                        cellEl.appendChild(badge);
-                    }
-                });
+                // Add cluster count badge to cell
+                if (cellEl) {
+                    const badge = document.createElement('div');
+                    badge.className = 'cluster-badge';
+                    badge.textContent = `×${len}`;
+                    cellEl.appendChild(badge);
+                }
             }
 
             if (len === 1) {
@@ -2312,14 +2416,14 @@ class LudoGameApp {
                     token.element.style.transform = `scale(1) translate(0, 0)`;
                 }
             } else if (len === 2) {
-                const offsets = [ {x: -4, y: -4}, {x: 4, y: 4} ];
+                const offsets = [ {x: -5, y: -5}, {x: 5, y: 5} ];
                 list.forEach((token, idx) => {
                     if (token.element) {
-                        token.element.style.transform = `scale(0.7) translate(${offsets[idx].x}px, ${offsets[idx].y}px)`;
+                        token.element.style.transform = `scale(0.72) translate(${offsets[idx].x}px, ${offsets[idx].y}px)`;
                     }
                 });
             } else if (len === 3) {
-                const offsets = [ {x: -5, y: -5}, {x: 5, y: -5}, {x: 0, y: 5} ];
+                const offsets = [ {x: -5, y: -5}, {x: 5, y: -5}, {x: 0, y: 6} ];
                 list.forEach((token, idx) => {
                     if (token.element) {
                         token.element.style.transform = `scale(0.65) translate(${offsets[idx].x}px, ${offsets[idx].y}px)`;
@@ -2706,6 +2810,7 @@ class LudoGameApp {
             this.syncPlayerNamesToPanels();
             const hostPlayer = room.players.find(p => p.isHost);
             const hostColor = hostPlayer ? hostPlayer.color : 'red';
+            this.hostColor = hostColor;
             this.startGame(hostColor);
         });
 
