@@ -1113,7 +1113,7 @@ class LudoGameApp {
         }
     }
 
-    startGame() {
+    startGame(startColor = 'red') {
         this.matchStartTime = Date.now();
         
         this.playersOrder.forEach(color => {
@@ -1126,7 +1126,15 @@ class LudoGameApp {
             this.updateStatsUI(color);
         });
 
-        this.currentPlayerIdx = 0;
+        this.currentPlayerIdx = this.playersOrder.indexOf(startColor);
+        if (this.currentPlayerIdx === -1) this.currentPlayerIdx = 0;
+
+        // Skip any starting inactive player
+        while (this.inactivePlayers[this.getCurrentPlayerColor()]) {
+            this.currentPlayerIdx = (this.currentPlayerIdx + 1) % 4;
+        }
+
+        const activeColor = this.getCurrentPlayerColor();
         this.consecutiveSixes = 0;
         this.isRolling = false;
         this.lastRollResult = null;
@@ -1139,12 +1147,17 @@ class LudoGameApp {
         this.updateActivePlayerUI();
         this.recalculateBoardClusters();
         
-        this.logFeedMessage('Game started! Red plays first.');
-        this.showToastNotification('Game Started!', 'red');
+        this.logFeedMessage(`Game started! ${this.playerNames[activeColor]} plays first.`);
+        this.showToastNotification('Game Started!', activeColor);
 
         const gameDice = document.getElementById('game-dice');
         if (gameDice) {
             gameDice.className = `dice show-1 skin-${this.equippedDiceSkin}`;
+        }
+
+        // Trigger bot turn if starting player is a bot
+        if (this.isBotColor[activeColor]) {
+            this.playBotTurn();
         }
     }
 
@@ -2669,7 +2682,9 @@ class LudoGameApp {
             });
 
             this.syncPlayerNamesToPanels();
-            this.startGame();
+            const hostPlayer = room.players.find(p => p.isHost);
+            const hostColor = hostPlayer ? hostPlayer.color : 'red';
+            this.startGame(hostColor);
         });
 
         this.socket.on('game_dice_rolled', (data) => {
