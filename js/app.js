@@ -1637,7 +1637,7 @@ class LudoGameApp {
 
         cellsContainer.innerHTML = '';
 
-        const startCells = { red: { r: 8, c: 2 }, green: { r: 2, c: 8 }, yellow: { r: 8, c: 14 }, blue: { r: 14, c: 8 } };
+        const startCells = { red: { r: 7, c: 2 }, green: { r: 2, c: 9 }, yellow: { r: 9, c: 14 }, blue: { r: 14, c: 7 } };
         const safeCells = [ { r: 9, c: 3 }, { r: 3, c: 7 }, { r: 7, c: 13 }, { r: 13, c: 9 } ];
         const homePaths = {
             red: [ { r: 8, c: 2 }, { r: 8, c: 3 }, { r: 8, c: 4 }, { r: 8, c: 5 }, { r: 8, c: 6 } ],
@@ -2226,7 +2226,7 @@ class LudoGameApp {
             }
         } else {
             if (finalCoords) {
-                const isStartCell = Object.values({ red: { r: 8, c: 2 }, green: { r: 2, c: 8 }, yellow: { r: 8, c: 14 }, blue: { r: 14, c: 8 } })
+                const isStartCell = Object.values({ red: { r: 7, c: 2 }, green: { r: 2, c: 9 }, yellow: { r: 9, c: 14 }, blue: { r: 14, c: 7 } })
                     .some(sc => sc.r === finalCoords.r && sc.c === finalCoords.c);
                 if (isStartCell) {
                     this.showToastNotification('🚀 Safe Start!', color);
@@ -2268,10 +2268,9 @@ class LudoGameApp {
     checkWinCondition(color) {
         return this.tokens[color].every(token => token.isFinished);
     }
-
     checkIfSafeCell(coords) {
         const safeCells = [ { r: 9, c: 3 }, { r: 3, c: 7 }, { r: 7, c: 13 }, { r: 13, c: 9 } ];
-        const startCells = [ { r: 8, c: 2 }, { r: 2, c: 8 }, { r: 8, c: 14 }, { r: 14, c: 8 } ];
+        const startCells = [ { r: 7, c: 2 }, { r: 2, c: 9 }, { r: 9, c: 14 }, { r: 14, c: 7 } ];
         const inSafe = safeCells.some(sc => sc.r === coords.r && sc.c === coords.c);
         const inStart = startCells.some(sc => sc.r === coords.r && sc.c === coords.c);
         return inSafe || inStart;
@@ -2281,10 +2280,10 @@ class LudoGameApp {
         const toCapture = [];
         // Starting cells are permanently safe – never capture on them
         const startCells = [
-            { r: 8, c: 2 },   // red start
-            { r: 2, c: 8 },   // green start
-            { r: 8, c: 14 },  // yellow start
-            { r: 14, c: 8 }   // blue start
+            { r: 7, c: 2 },   // red start
+            { r: 2, c: 9 },   // green start
+            { r: 9, c: 14 },  // yellow start
+            { r: 14, c: 7 }   // blue start
         ];
         const isStartCell = startCells.some(sc => sc.r === coords.r && sc.c === coords.c);
         if (isStartCell) return toCapture;
