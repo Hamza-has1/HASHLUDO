@@ -1707,24 +1707,15 @@ class LudoGameApp {
                     isFinished: false,
                     element: el
                 };
-                this.tokens[color].push(tokenState);
-            }
-        });
-
-        // Use event delegation on the full viewport so clicks reach tokens
-        // regardless of whether they sit inside home slots or on the board
-        const viewport = document.getElementById('main-play-viewport') || document.getElementById('game-play-screen') || document.body;
-        viewport.addEventListener('click', (e) => {
-            const el = e.target.closest('.ludo-token');
-            if (!el) return;
-            // Find the token state object for this element
-            for (const color of this.playersOrder) {
-                for (const token of this.tokens[color]) {
-                    if (token.element === el) {
-                        this.handleTokenClick(token);
-                        return;
-                    }
+                
+                if (el) {
+                    el.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        this.handleTokenClick(tokenState);
+                    });
                 }
+
+                this.tokens[color].push(tokenState);
             }
         });
     }
@@ -2079,14 +2070,8 @@ class LudoGameApp {
     }
 
     isPathBlockedByBlockade(token, startPos, steps) {
-        const color = token.color;
-        // Only block at the FINAL destination by opponent double-stacks (true blockade)
-        // Intermediate cells are NOT blocking — tokens can hop over them
-        const endPos = startPos + steps;
-        if (endPos > 56) return false;
-        const endCoords = this.playerPaths[color][endPos];
-        if (!endCoords) return false;
-        return this.hasOpponentBlockadeAt(color, endCoords);
+        // Disabled blockade blocking completely as requested
+        return false;
     }
 
     hasOpponentBlockadeAt(myColor, coords) {

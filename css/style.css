@@ -609,11 +609,11 @@ html, body {
 .cell-yellow-path { background: linear-gradient(135deg, #312208 0%, #180f03 100%) !important; border-color: rgba(255,204,0,0.15); }
 .cell-blue-path   { background: linear-gradient(135deg, #0a1e35 0%, #050f1a 100%) !important; border-color: rgba(0,122,255,0.15); }
 
-/* Start and Safe cells highlights */
-.cell-red-start    { background: linear-gradient(135deg, #ff3b30 0%, #8a1f1a 100%) !important; box-shadow: inset 0 0 14px rgba(255,255,255,0.25), 0 0 10px rgba(255,59,48,0.4); border-color: rgba(255,59,48,0.6) !important; }
-.cell-green-start  { background: linear-gradient(135deg, #34c759 0%, #1f6b31 100%) !important; box-shadow: inset 0 0 14px rgba(255,255,255,0.25), 0 0 10px rgba(52,199,89,0.4); border-color: rgba(52,199,89,0.6) !important; }
-.cell-yellow-start { background: linear-gradient(135deg, #ffcc00 0%, #b38f00 100%) !important; box-shadow: inset 0 0 14px rgba(255,255,255,0.3), 0 0 10px rgba(255,204,0,0.4); border-color: rgba(255,204,0,0.6) !important; }
-.cell-blue-start   { background: linear-gradient(135deg, #007aff 0%, #0059b3 100%) !important; box-shadow: inset 0 0 14px rgba(255,255,255,0.25), 0 0 10px rgba(0,122,255,0.4); border-color: rgba(0,122,255,0.6) !important; }
+/* Start and Safe cells highlights — Dark styled launch boxes */
+.cell-red-start    { background: #1a0808 !important; border: 3px solid #ff3b30 !important; box-shadow: 0 0 10px rgba(255, 59, 48, 0.4), inset 0 0 12px rgba(255, 59, 48, 0.25) !important; }
+.cell-green-start  { background: #081c0c !important; border: 3px solid #34c759 !important; box-shadow: 0 0 10px rgba(52, 199, 89, 0.4), inset 0 0 12px rgba(52, 199, 89, 0.25) !important; }
+.cell-yellow-start { background: #1c1c04 !important; border: 3px solid #ffcc00 !important; box-shadow: 0 0 10px rgba(255, 204, 0, 0.4), inset 0 0 12px rgba(255, 204, 0, 0.25) !important; }
+.cell-blue-start   { background: #081428 !important; border: 3px solid #007aff !important; box-shadow: 0 0 10px rgba(0, 122, 255, 0.4), inset 0 0 12px rgba(0, 122, 255, 0.25) !important; }
 
 /* Star Indicators for Safe Cells */
 .cell-safe {
