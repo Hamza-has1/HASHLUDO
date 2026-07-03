@@ -609,11 +609,11 @@ html, body {
 .cell-yellow-path { background: linear-gradient(135deg, #312208 0%, #180f03 100%) !important; border-color: rgba(255,204,0,0.15); }
 .cell-blue-path   { background: linear-gradient(135deg, #0a1e35 0%, #050f1a 100%) !important; border-color: rgba(0,122,255,0.15); }
 
-/* Start and Safe cells highlights — Dark styled launch boxes */
-.cell-red-start    { background: #1a0808 !important; border: 3px solid #ff3b30 !important; box-shadow: 0 0 10px rgba(255, 59, 48, 0.4), inset 0 0 12px rgba(255, 59, 48, 0.25) !important; }
-.cell-green-start  { background: #081c0c !important; border: 3px solid #34c759 !important; box-shadow: 0 0 10px rgba(52, 199, 89, 0.4), inset 0 0 12px rgba(52, 199, 89, 0.25) !important; }
-.cell-yellow-start { background: #1c1c04 !important; border: 3px solid #ffcc00 !important; box-shadow: 0 0 10px rgba(255, 204, 0, 0.4), inset 0 0 12px rgba(255, 204, 0, 0.25) !important; }
-.cell-blue-start   { background: #081428 !important; border: 3px solid #007aff !important; box-shadow: 0 0 10px rgba(0, 122, 255, 0.4), inset 0 0 12px rgba(0, 122, 255, 0.25) !important; }
+/* Start and Safe cells highlights — Very Dark styled launch boxes */
+.cell-red-start    { background: #220807 !important; border: 2.5px solid #ff3b30 !important; box-shadow: 0 0 10px rgba(255, 59, 48, 0.35), inset 0 0 12px rgba(255, 59, 48, 0.2) !important; }
+.cell-green-start  { background: #081a0e !important; border: 2.5px solid #34c759 !important; box-shadow: 0 0 10px rgba(52, 199, 89, 0.35), inset 0 0 12px rgba(52, 199, 89, 0.2) !important; }
+.cell-yellow-start { background: #1e1705 !important; border: 2.5px solid #ffcc00 !important; box-shadow: 0 0 10px rgba(255, 204, 0, 0.35), inset 0 0 12px rgba(255, 204, 0, 0.2) !important; }
+.cell-blue-start   { background: #051428 !important; border: 2.5px solid #007aff !important; box-shadow: 0 0 10px rgba(0, 122, 255, 0.35), inset 0 0 12px rgba(0, 122, 255, 0.2) !important; }
 
 /* Star Indicators for Safe Cells */
 .cell-safe {
@@ -627,6 +627,10 @@ html, body {
     filter: drop-shadow(0 0 4px rgba(255, 200, 0, 0.6));
     opacity: 0.85;
     pointer-events: none;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
 }
 
 .cell-red-start::after,
@@ -635,9 +639,13 @@ html, body {
 .cell-blue-start::after {
     content: '🚀';
     font-size: 0.9rem;
-    opacity: 1;
+    opacity: 0.9;
     pointer-events: none;
     filter: drop-shadow(0 2px 4px rgba(0,0,0,0.8));
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
 }
 
 /* 🧱 Phase 5: Blockades Highlight */
@@ -832,8 +840,13 @@ html, body {
 
 /* 🪙 Token Visual design rules — 3D sphere look */
 .ludo-token {
-    width: 75%;
-    height: 75%;
+    width: var(--token-size);
+    height: var(--token-size);
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    margin-top: calc(var(--token-size) / -2);
+    margin-left: calc(var(--token-size) / -2);
     border-radius: 50%;
     border: 2px solid rgba(255, 255, 255, 0.5);
     box-shadow:
@@ -843,7 +856,6 @@ html, body {
     cursor: default;
     z-index: 50;
     transition: transform 0.25s cubic-bezier(0.25, 0.8, 0.25, 1), box-shadow 0.2s;
-    position: relative;
     pointer-events: auto;
     animation: floatToken 3s ease-in-out infinite;
     transform-style: preserve-3d;
@@ -915,16 +927,8 @@ html, body {
     transform: scale(0.92);
 }
 
-/* Board position layout adjustments */
-#ludo-board .ludo-token {
-    position: absolute;
-    width: var(--token-size);
-    height: var(--token-size);
-    place-self: center;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-}
+
+
 
 /* Toast Popups Alert Center */
 .toast-container {
