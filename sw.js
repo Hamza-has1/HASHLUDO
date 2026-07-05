@@ -1,4 +1,4 @@
-const CACHE_NAME = 'hashludo-v3';
+const CACHE_NAME = 'hashludo-v4';
 const ASSETS = [
   './',
   './index.html',
