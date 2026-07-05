@@ -746,6 +746,7 @@ class LudoGameApp {
                 this.settings.particles = e.target.checked;
                 this.playAudio('click');
                 this.saveSettings();
+                this.toggleBackgroundParticles();
             });
         }
         if (difficultySelect) {
@@ -2652,10 +2653,12 @@ class LudoGameApp {
             });
         }
 
-        const animate = () => {
+        this.isParticlesAnimating = false;
+
+        this.runParticlesAnimation = () => {
             if (!this.settings.particles) {
                 ctx.clearRect(0, 0, width, height);
-                requestAnimationFrame(animate);
+                this.isParticlesAnimating = false;
                 return;
             }
 
@@ -2676,10 +2679,22 @@ class LudoGameApp {
                 ctx.fill();
             });
 
-            requestAnimationFrame(animate);
+            requestAnimationFrame(this.runParticlesAnimation);
         };
 
-        animate();
+        if (this.settings.particles) {
+            this.isParticlesAnimating = true;
+            this.runParticlesAnimation();
+        }
+    }
+
+    toggleBackgroundParticles() {
+        if (this.settings.particles && !this.isParticlesAnimating) {
+            this.isParticlesAnimating = true;
+            if (this.runParticlesAnimation) {
+                this.runParticlesAnimation();
+            }
+        }
     }
 
     checkSavedMatch() {

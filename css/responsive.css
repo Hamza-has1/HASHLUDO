@@ -5,15 +5,19 @@
 
 :root {
     --vh: 1vh;
+    --board-size: min(90vw, calc(100vh - 180px), 560px);
+    --token-size: calc(var(--board-size) / 15 * 0.72);
+    --dice-size: clamp(30px, calc(var(--board-size) * 0.08), 44px);
+}
+
+@media screen and (max-height: 500px) {
+    :root {
+        --board-size: min(90vw, calc(100vh - 100px), 560px);
+    }
 }
 
 /* 💻 Medium Devices / Laptops & Tablets (landscape/portrait) */
 @media screen and (max-width: 1200px) {
-    :root {
-        --board-size: 480px;
-        --token-size: 20px;
-    }
-    
     .game-play-area {
         gap: 20px;
     }
@@ -35,11 +39,6 @@
 
 /* 📱 Tablet Devices (portrait) and smaller screens */
 @media screen and (max-width: 992px) {
-    :root {
-        --board-size: 440px;
-        --token-size: 18px;
-    }
-
     .game-play-area {
         flex-direction: column;
         justify-content: center;
@@ -50,14 +49,16 @@
 
     .side-panels {
         flex-direction: row;
+        flex-wrap: wrap;
         width: 100%;
         justify-content: center;
-        gap: 15px;
+        gap: 10px;
     }
 
     .player-panel {
-        flex: 1;
+        flex: 1 1 calc(50% - 10px);
         max-width: 220px;
+        min-width: 130px;
     }
 
     .top-bar {
@@ -72,11 +73,6 @@
 
 /* 📱 Mobile Portrait Layouts */
 @media screen and (max-width: 576px) {
-    :root {
-        --board-size: calc(100vw - 20px);
-        --token-size: calc((100vw - 20px) / 15 * 0.7);
-    }
-
     .game-play-area {
         padding: 8px;
         gap: 10px;
@@ -154,11 +150,6 @@
 
 /* 📱 Mobile Landscape Layouts (Fits within height constraints) */
 @media screen and (max-height: 500px) and (orientation: landscape) {
-    :root {
-        --board-size: calc(100vh - 110px);
-        --token-size: calc((100vh - 110px) / 15 * 0.7);
-    }
-
     .top-bar {
         height: 44px;
     }
@@ -241,8 +232,10 @@
         font-size: 0.85rem !important;
         padding: 4px 10px !important;
     }
+}
 
-    :root {
-        --dice-size: 28px;
-    }
+/* 🌀 Scroll support for overlay dialog content on small screens */
+.overlay-content {
+    max-height: 90vh;
+    overflow-y: auto;
 }
