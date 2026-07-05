@@ -2465,7 +2465,7 @@ class LudoGameApp {
             token.element.style.position = 'absolute';
             token.element.style.top = '50%';
             token.element.style.left = '50%';
-            token.element.style.transform = 'translate(-50%,-50%)';
+            token.element.style.transform = '';
         } else {
             // Fallback: place directly on board grid
             const board = document.getElementById('ludo-board');
