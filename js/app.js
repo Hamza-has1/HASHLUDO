@@ -2151,6 +2151,8 @@ class LudoGameApp {
         const startPos = token.position;
         const endPos = (startPos === -1) ? 0 : (startPos + steps);
 
+        console.log(`[Ludo Game] animateTokenMove called: color=${color}, id=${token.id}, steps=${steps}, startPos=${startPos}, endPos=${endPos}`);
+
         // Update movement statistics
         this.stats[color].distanceTravelled += steps;
         this.globalStats.distanceTravelled += steps;
