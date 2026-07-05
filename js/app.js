@@ -258,6 +258,10 @@ class LudoGameApp {
         this.hasPendingMove = false;
         this.extraTurnAwarded = false;
 
+        // Track which players have finished (all 4 tokens home)
+        this.finishedPlayers = { red: false, green: false, yellow: false, blue: false };
+        this.winnersList = []; // ordered list of winners
+
         // Path Map Array coordinates mapping
         this.commonPath = [];
         this.playerPaths = { red: [], green: [], yellow: [], blue: [] };
@@ -1207,6 +1211,8 @@ class LudoGameApp {
     resetGame() {
         this.isConfettiMode = false;
         this.gameState = 'menu';
+        this.finishedPlayers = { red: false, green: false, yellow: false, blue: false };
+        this.winnersList = [];
     }
 
     saveActiveMatch() {
@@ -1275,7 +1281,13 @@ class LudoGameApp {
                 token.isFinished = sT.finished;
 
                 if (token.isFinished) {
-                    if (token.element) token.element.style.display = 'none';
+                    if (token.element) {
+                        token.element.style.display = 'flex';
+                        token.element.classList.add('token-finished');
+                        token.element.style.pointerEvents = 'none';
+                        token.element.style.cursor = 'default';
+                        this.positionTokenOnBoard(token, null);
+                    }
                 } else if (token.position === -1) {
                     this.moveTokenToHomeSlot(token);
                 } else {
@@ -2131,7 +2143,10 @@ class LudoGameApp {
     }
 
     async animateTokenMove(token, steps) {
+        if (this.isAnimatingToken) return;
+        this.isAnimatingToken = true;
         this.isRolling = true;
+        
         const color = token.color;
         const startPos = token.position;
         const endPos = (startPos === -1) ? 0 : (startPos + steps);
@@ -2153,7 +2168,12 @@ class LudoGameApp {
 
             setTimeout(() => {
                 this.isRolling = false;
-                this.processTurnLogic(steps);
+                this.isAnimatingToken = false;
+                if (this.checkWinCondition(color) && !this.finishedPlayers[color]) {
+                    this.handleVictory(color);
+                } else {
+                    this.processTurnLogic(steps);
+                }
             }, 300);
             return;
         }
@@ -2257,8 +2277,9 @@ class LudoGameApp {
 
         this.saveActiveMatch();
         this.isRolling = false;
+        this.isAnimatingToken = false;
         
-        if (this.checkWinCondition(color)) {
+        if (this.checkWinCondition(color) && !this.finishedPlayers[color]) {
             this.handleVictory(color);
         } else {
             this.processTurnLogic(steps);
@@ -2268,6 +2289,115 @@ class LudoGameApp {
     checkWinCondition(color) {
         return this.tokens[color].every(token => token.isFinished);
     }
+
+    handleVictory(color) {
+        // Mark this player as finished
+        this.finishedPlayers[color] = true;
+        this.winnersList.push(color);
+
+        // Show winner announcement
+        const rank = this.winnersList.length;
+        const suffix = rank === 1 ? 'st' : rank === 2 ? 'nd' : rank === 3 ? 'rd' : 'th';
+        this.playAudio('finished');
+        this.triggerVibration(200);
+        this.showToastNotification(`🏆 ${this.playerNames[color]} finishes ${rank}${suffix}!`, color);
+        this.logFeedMessage(`🏆 ${this.playerNames[color]} finishes in ${rank}${suffix} place!`);
+        this.updatePlayerStatus(color, `🏆 ${rank}${suffix} Place`);
+
+        // Count how many active (non-inactive) players have NOT finished yet
+        const activeColors = this.playersOrder.filter(c => !this.inactivePlayers[c]);
+        const remainingPlayers = activeColors.filter(c => !this.finishedPlayers[c]);
+
+        if (remainingPlayers.length === 1) {
+            // The last remaining player automatically becomes the loser (final rank)
+            const loserColor = remainingPlayers[0];
+            this.finishedPlayers[loserColor] = true;
+            this.winnersList.push(loserColor);
+            
+            const loserRank = this.winnersList.length;
+            const loserSuffix = loserRank === 1 ? 'st' : loserRank === 2 ? 'nd' : loserRank === 3 ? 'rd' : 'th';
+            this.updatePlayerStatus(loserColor, `💀 ${loserRank}${loserSuffix} Place (Loser)`);
+            this.logFeedMessage(`💀 ${this.playerNames[loserColor]} finished last (${loserRank}${loserSuffix} place).`);
+        }
+
+        const updatedRemaining = activeColors.filter(c => !this.finishedPlayers[c]);
+
+        if (updatedRemaining.length === 0) {
+            // Game over! Show victory overlay with the 1st place winner
+            const winnerColor = this.winnersList[0];
+            this.gameState = 'gameover';
+            this.matchEndTime = Date.now();
+            this.isConfettiMode = true;
+
+            // Update victory overlay UI
+            const winnerBanner = document.getElementById('winner-name-banner');
+            if (winnerBanner) {
+                winnerBanner.textContent = this.playerNames[winnerColor];
+                winnerBanner.style.color = `var(--color-${winnerColor})`;
+            }
+
+            const vTurns = document.getElementById('v-stat-turns');
+            const vCaptures = document.getElementById('v-stat-captures');
+            const vDuration = document.getElementById('v-stat-duration');
+
+            if (vTurns) vTurns.textContent = this.stats[winnerColor].turnsPlayed;
+            if (vCaptures) vCaptures.textContent = this.stats[winnerColor].capturesMade;
+            if (vDuration) {
+                const elapsed = Math.floor((this.matchEndTime - this.matchStartTime) / 1000);
+                const mins = Math.floor(elapsed / 60);
+                const secs = elapsed % 60;
+                vDuration.textContent = `${mins}m ${secs}s`;
+            }
+
+            // Build rankings list HTML dynamically
+            const listContainer = document.getElementById('rankings-list-container');
+            if (listContainer) {
+                listContainer.innerHTML = '';
+                this.winnersList.forEach((wColor, idx) => {
+                    const rNum = idx + 1;
+                    const rSuffix = rNum === 1 ? 'st' : rNum === 2 ? 'nd' : rNum === 3 ? 'rd' : 'th';
+                    const isWinner = rNum === 1;
+
+                    const row = document.createElement('div');
+                    row.style.display = 'flex';
+                    row.style.justifyContent = 'space-between';
+                    row.style.alignItems = 'center';
+                    row.style.padding = '8px 12px';
+                    row.style.background = isWinner ? 'rgba(255, 204, 0, 0.1)' : 'rgba(255, 255, 255, 0.02)';
+                    row.style.border = isWinner ? '1px solid rgba(255, 204, 0, 0.25)' : '1px solid rgba(255, 255, 255, 0.04)';
+                    row.style.borderRadius = '8px';
+
+                    row.innerHTML = `
+                        <span style="font-weight: bold; color: ${isWinner ? 'gold' : 'var(--text-muted)'}; font-size: 1rem;">
+                            #${rNum} Place
+                        </span>
+                        <span style="font-weight: 600; color: var(--color-${wColor}); font-size: 1rem;">
+                            ${this.playerNames[wColor]} ${isWinner ? '👑' : ''}
+                        </span>
+                    `;
+                    listContainer.appendChild(row);
+                });
+            }
+
+            this.playAudio('victory');
+            this.openOverlay('victory-overlay');
+
+            // Award progression/stats to winner
+            this.globalStats.totalWins++;
+            this.globalStats.totalMatches++;
+            this.unlockAchievement('first-win');
+            this.addXP(50);
+            this.addCoins(25);
+            this.addRankPoints(30);
+
+            // Clear saved match
+            window.LudoUtils.storage.remove('ludo_active_match');
+        } else {
+            // Game continues — pass turn to next remaining player
+            this.processTurnLogic(0);
+        }
+    }
+
     checkIfSafeCell(coords) {
         const safeCells = [ { r: 9, c: 3 }, { r: 3, c: 7 }, { r: 7, c: 13 }, { r: 13, c: 9 } ];
         const startCells = [ { r: 7, c: 2 }, { r: 2, c: 9 }, { r: 9, c: 14 }, { r: 14, c: 7 } ];
@@ -2303,6 +2433,26 @@ class LudoGameApp {
 
     positionTokenOnBoard(token, coords) {
         if (!token.element) return;
+        
+        // Place finished tokens inside their dedicated colored slots in the center winning zone
+        if (token.position === 56 || token.isFinished) {
+            const finishedSlot = document.querySelector(`.${token.color}-finished-slot.slot-${token.id}`);
+            if (finishedSlot) {
+                if (token.element.parentElement !== finishedSlot) {
+                    finishedSlot.appendChild(token.element);
+                }
+                token.element.style.gridRow = '';
+                token.element.style.gridColumn = '';
+                token.element.style.position = 'relative';
+                token.element.style.top = 'auto';
+                token.element.style.left = 'auto';
+                token.element.style.marginTop = '0px';
+                token.element.style.marginLeft = '0px';
+                token.element.style.transform = '';
+                return;
+            }
+        }
+
         const cellId = `cell-${coords.r}-${coords.c}`;
         const targetCell = document.getElementById(cellId);
         if (targetCell) {
@@ -2605,11 +2755,15 @@ class LudoGameApp {
         this.extraTurnAwarded = false;
         
         const prevColor = this.getCurrentPlayerColor();
-        this.updatePlayerStatus(prevColor, 'Waiting...');
+        this.updatePlayerStatus(prevColor, this.finishedPlayers[prevColor] ? `🏆 Winner` : 'Waiting...');
 
+        // Skip inactive AND finished players
+        let loopGuard = 0;
         do {
             this.currentPlayerIdx = (this.currentPlayerIdx + 1) % 4;
-        } while (this.inactivePlayers[this.getCurrentPlayerColor()]);
+            loopGuard++;
+            if (loopGuard > 8) break; // safety
+        } while (this.inactivePlayers[this.getCurrentPlayerColor()] || this.finishedPlayers[this.getCurrentPlayerColor()]);
 
         const activeColor = this.getCurrentPlayerColor();
         this.updateActivePlayerUI();

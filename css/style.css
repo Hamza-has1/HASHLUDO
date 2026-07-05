@@ -711,6 +711,18 @@ html, body {
     filter: drop-shadow(0 -3px 6px rgba(0, 122, 255, 0.5));
 }
 
+.finished-slot {
+    position: absolute;
+    width: var(--token-size);
+    height: var(--token-size);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    pointer-events: none;
+    z-index: 100;
+    transform: translate(-50%, -50%);
+}
+
 /* 📥 Bottom Bar Component styles */
 .bottom-bar {
     width: 100%;
