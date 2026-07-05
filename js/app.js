@@ -2151,80 +2151,37 @@ class LudoGameApp {
         const startPos = token.position;
         const endPos = (startPos === -1) ? 0 : (startPos + steps);
 
+        // Update movement statistics
         this.stats[color].distanceTravelled += steps;
         this.globalStats.distanceTravelled += steps;
 
-        if (startPos === -1 && endPos === 0) {
-            token.position = 0;
-            this.playAudio('notification');
-            this.triggerVibration(50);
-            
-            const targetCellCoords = this.playerPaths[color][0];
-            this.positionTokenOnBoard(token, targetCellCoords);
-            this.updateStatsUI(color);
-            this.recalculateBoardClusters();
-
-            this.saveActiveMatch();
-
-            setTimeout(() => {
-                this.isRolling = false;
-                this.isAnimatingToken = false;
-                if (this.checkWinCondition(color) && !this.finishedPlayers[color]) {
-                    this.handleVictory(color);
-                } else {
-                    this.processTurnLogic(steps);
-                }
-            }, 300);
-            return;
+        // Apply logical changes instantly
+        token.position = endPos;
+        if (endPos === 56) {
+            token.isFinished = true;
         }
 
-        let currentPos = startPos;
-        for (let s = 1; s <= steps; s++) {
-            currentPos++;
-            token.position = currentPos;
-            
-            const coords = this.playerPaths[color][currentPos];
-            this.positionTokenOnBoard(token, coords);
-            
-            if (token.element) {
-                token.element.style.transform = `scale(1.25) translateY(-5px)`;
-                this.playAudio('move');
-                this.triggerVibration(20);
-            }
-
-            await new Promise(resolve => setTimeout(resolve, 200));
-            
-            if (token.element) {
-                token.element.style.transform = `scale(1) translateY(0)`;
-            }
-            
-            await new Promise(resolve => setTimeout(resolve, 50));
-        }
-
+        // Compute captures instantly
+        let capturedTokens = [];
         const finalCoords = this.playerPaths[color][endPos];
         const isSafeCell = this.checkIfSafeCell(finalCoords);
 
         if (!isSafeCell) {
-            const capturedList = this.checkOpponentsToCapture(color, finalCoords);
-            if (capturedList.length > 0) {
-                this.playAudio('capture');
-                this.triggerVibration(250);
-                this.showToastNotification('💥 Token Captured!', color);
-                this.logFeedMessage(`${this.playerNames[color]} captured opponent token!`);
-                
-                // Only capture ONE token from each color group (if 2 same-color on cell, only 1 removed)
+            const opponentColorTokens = this.checkOpponentsToCapture(color, finalCoords);
+            if (opponentColorTokens.length > 0) {
+                // Ensure only one token from each color is captured
                 const capturedByColor = {};
-                capturedList.forEach(cToken => {
+                opponentColorTokens.forEach(cToken => {
                     if (!capturedByColor[cToken.color]) {
                         capturedByColor[cToken.color] = cToken;
                     }
                 });
 
-                Object.values(capturedByColor).forEach(cToken => {
-                    cToken.position = -1;
+                capturedTokens = Object.values(capturedByColor);
+                capturedTokens.forEach(cToken => {
+                    cToken.position = -1; // Logically send home instantly
                     this.stats[cToken.color].timesCaptured++;
                     this.updateStatsUI(cToken.color);
-                    this.moveTokenToHomeSlot(cToken);
                 });
 
                 this.stats[color].capturesMade++;
@@ -2241,30 +2198,69 @@ class LudoGameApp {
 
                 this.globalStats.totalCaptures++;
                 this.unlockAchievement('capture-master');
-                
                 this.extraTurnAwarded = true;
             }
+        }
+
+        // Save match state instantly
+        this.saveActiveMatch();
+
+        // --- Visual Animation Segment (Purely Visual) ---
+        if (startPos === -1 && endPos === 0) {
+            // Visual exit from home yard
+            this.playAudio('notification');
+            this.triggerVibration(50);
+            const targetCellCoords = this.playerPaths[color][0];
+            this.positionTokenOnBoard(token, targetCellCoords);
         } else {
-            if (finalCoords) {
-                const isStartCell = Object.values({ red: { r: 7, c: 2 }, green: { r: 2, c: 9 }, yellow: { r: 9, c: 14 }, blue: { r: 14, c: 7 } })
-                    .some(sc => sc.r === finalCoords.r && sc.c === finalCoords.c);
-                if (isStartCell) {
-                    this.showToastNotification('🚀 Safe Start!', color);
-                } else {
-                    this.showToastNotification('⭐ Safe Cell!', color);
+            // Visual step-by-step movement along path coordinates
+            let currentPos = startPos;
+            for (let s = 1; s <= steps; s++) {
+                currentPos++;
+                const coords = this.playerPaths[color][currentPos];
+                this.positionTokenOnBoard(token, coords);
+                
+                if (token.element) {
+                    token.element.style.transform = `scale(1.25) translateY(-5px)`;
+                    this.playAudio('move');
+                    this.triggerVibration(20);
                 }
+
+                await new Promise(resolve => setTimeout(resolve, 200));
+                
+                if (token.element) {
+                    token.element.style.transform = '';
+                }
+                
+                await new Promise(resolve => setTimeout(resolve, 50));
             }
+        }
+
+        // Visual: handle captures or cell alerts
+        if (capturedTokens.length > 0) {
+            this.playAudio('capture');
+            this.triggerVibration(250);
+            this.showToastNotification('💥 Token Captured!', color);
+            this.logFeedMessage(`${this.playerNames[color]} captured opponent token!`);
+
+            capturedTokens.forEach(cToken => {
+                this.moveTokenToHomeSlot(cToken);
+            });
+        } else if (isSafeCell && endPos !== 0) {
+            this.showToastNotification('⭐ Safe Cell!', color);
+            this.triggerVibration(40);
+        } else if (endPos === 0) {
+            this.showToastNotification('🚀 Safe Start!', color);
             this.triggerVibration(40);
         }
 
-        if (token.position === 56) {
-            token.isFinished = true;
+        // Visual: finished/won animation inside center slots
+        if (endPos === 56) {
             this.playAudio('finished');
             this.triggerVibration(100);
             this.showToastNotification(`🏆 Token Home!`, color);
             this.logFeedMessage(`${this.playerNames[color]}'s token reached center!`);
             
-            // Keep token VISIBLE on the center winning area with a finished glow
             if (token.element) {
                 token.element.classList.add('token-finished');
                 token.element.style.pointerEvents = 'none';
@@ -2275,10 +2271,12 @@ class LudoGameApp {
         this.updateStatsUI(color);
         this.recalculateBoardClusters();
 
-        this.saveActiveMatch();
         this.isRolling = false;
         this.isAnimatingToken = false;
         
+        // Final state save
+        this.saveActiveMatch();
+
         if (this.checkWinCondition(color) && !this.finishedPlayers[color]) {
             this.handleVictory(color);
         } else {
